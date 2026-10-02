@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Bulk Add Tables{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:520px">
+  <div class="panel-header">Bulk add tables</div>
+  <div class="panel-body">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group"><label>Prefix (optional)</label><input name="prefix" placeholder="e.g. T-"></div>
+      <div class="form-group"><label>Start number *</label><input name="start_number" type="number" value="1" min="1" required></div>
+      <div class="form-group"><label>How many tables *</label><input name="count" type="number" value="10" min="1" max="100" required></div>
+      <div class="form-group"><label>Persons (seating capacity) *</label><input name="seating_capacity" type="number" value="4" min="1" max="50" required></div>
+      <p class="muted">Example: prefix T-, start 1, count 10 → T-1 … T-10, each seats N persons. QR auto-created once (stable).</p>
+      <button type="submit" class="btn btn-primary">Create tables</button>
+      <a href="{{ url_for('rooms.list_tables') }}" class="btn btn-outline">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

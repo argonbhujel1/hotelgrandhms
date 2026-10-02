@@ -233,17 +233,18 @@ def qr_print(qr_id):
 def generate_room_qr(room_id):
     room = db.session.get(Room, room_id)
     if not room:
-        flash("Room not found.", "danger")
+        from flask import abort
+        abort(404)
+    existing = QRCode.query.filter_by(room_id=room.id, is_active=True, source_type="room").first()
+    if existing:
+        flash(f"Room {room.number} already has a QR (kept stable). Use Regenerate only if needed.", "info")
         return redirect(url_for("rooms.qr_list"))
-    # deactivate old
-    for q in room.qr_codes:
-        q.is_active = False
     qr = QRCode(token=QRCode.generate_token(), source_type="room", room_id=room.id, is_active=True)
     db.session.add(qr)
     db.session.commit()
-    log_activity("generate_qr", module="rooms", record_id=qr.id)
-    flash(f"QR generated for Room {room.number}.", "success")
+    flash(f"QR created for room {room.number}.", "success")
     return redirect(url_for("rooms.qr_list"))
+
 
 
 @rooms_bp.route("/tables/<int:table_id>/generate-qr", methods=["POST"])
@@ -368,3 +369,44 @@ def generate_all_table_qr():
     db.session.commit()
     flash(f"Generated {created} table QR code(s).", "success")
     return redirect(url_for("rooms.qr_list"))
+
+
+
+@rooms_bp.route("/tables/bulk-add", methods=["GET", "POST"])
+@login_required
+@permission_required("rooms.add")
+def bulk_add_tables():
+    """Add many tables at once: start number, count, seating capacity."""
+    if request.method == "POST":
+        start = int(request.form.get("start_number") or 1)
+        count = int(request.form.get("count") or 1)
+        capacity = int(request.form.get("seating_capacity") or 4)
+        prefix = (request.form.get("prefix") or "").strip()
+        created = 0
+        skipped = 0
+        for i in range(count):
+            num = f"{prefix}{start + i}" if prefix else str(start + i)
+            if RestaurantTable.query.filter_by(number=num).first():
+                skipped += 1
+                continue
+            tbl = RestaurantTable(
+                number=num,
+                seating_capacity=capacity,
+                status="available",
+                is_active=True,
+            )
+            db.session.add(tbl)
+            db.session.flush()
+            # Stable QR — only if none exists
+            if not QRCode.query.filter_by(table_id=tbl.id, is_active=True).first():
+                db.session.add(QRCode(
+                    token=QRCode.generate_token(),
+                    source_type="table",
+                    table_id=tbl.id,
+                    is_active=True,
+                ))
+            created += 1
+        db.session.commit()
+        flash(f"Added {created} table(s) (capacity {capacity}). Skipped {skipped} existing.", "success")
+        return redirect(url_for("rooms.list_tables"))
+    return render_template("rooms/bulk_tables.html")

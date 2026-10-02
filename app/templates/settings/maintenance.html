@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Maintenance Mode{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:560px">
+  <div class="panel-header">HMS Maintenance Mode</div>
+  <div class="panel-body">
+    <p class="muted">When enabled, only technical admin <strong>argon</strong> can use HMS. Others see the maintenance page with logo/favicon.</p>
+    <form method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label><input type="checkbox" name="maintenance_mode" value="1" {% if maintenance_mode %}checked{% endif %}> Enable maintenance mode</label>
+      </div>
+      <div class="form-group"><label>Message</label>
+        <textarea name="maintenance_message" rows="3">{{ maintenance_message }}</textarea>
+      </div>
+      <div class="form-group"><label>Logo URL</label><input name="logo_url" value="{{ logo_url }}"></div>
+      <div class="form-group"><label>Or upload logo</label><input type="file" name="logo_file" accept="image/*"></div>
+      {% if logo_url %}<p><img src="{{ logo_url if logo_url.startswith('http') else url_for('static', filename=logo_url) }}" style="max-height:60px"></p>{% endif %}
+      <div class="form-group"><label>Favicon URL</label><input name="favicon_url" value="{{ favicon_url }}"></div>
+      <div class="form-group"><label>Or upload favicon</label><input type="file" name="favicon_file" accept="image/*,.ico"></div>
+      <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

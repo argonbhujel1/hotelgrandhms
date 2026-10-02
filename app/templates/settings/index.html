@@ -6,6 +6,9 @@
     <p style="font-size:.9rem;color:var(--muted);margin-bottom:.75rem">Wipe all orders, bills and bookings. Staff, menu and rooms stay.</p>
     <a href="{{ url_for('settings.clear_data') }}" class="btn btn-outline" style="border-color:#ef4444;color:#b91c1c">Clear all orders / bookings / sales</a>
   </div>
+  <a class="panel" href="{{ url_for('settings.maintenance') }}" style="display:block;padding:1rem;margin-top:.5rem">
+    <strong>Maintenance mode</strong><br><span class="muted">Enable/disable HMS maintenance · logo & favicon</span>
+  </a>
 </div>
 {% endblock %}
 {% block content %}
@@ -31,5 +34,8 @@
     <p style="font-size:.9rem;color:var(--muted);margin-bottom:.75rem">Wipe all orders, bills and bookings. Staff, menu and rooms stay.</p>
     <a href="{{ url_for('settings.clear_data') }}" class="btn btn-outline" style="border-color:#ef4444;color:#b91c1c">Clear all orders / bookings / sales</a>
   </div>
+  <a class="panel" href="{{ url_for('settings.maintenance') }}" style="display:block;padding:1rem;margin-top:.5rem">
+    <strong>Maintenance mode</strong><br><span class="muted">Enable/disable HMS maintenance · logo & favicon</span>
+  </a>
 </div>
 {% endblock %}

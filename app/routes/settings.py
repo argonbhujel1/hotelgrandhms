@@ -200,3 +200,45 @@ def clear_data():
             flash(f"Clear failed: {e}", "danger")
         return redirect(url_for("settings.clear_data"))
     return render_template("settings/clear_data.html")
+
+
+
+@settings_bp.route("/maintenance", methods=["GET", "POST"])
+@login_required
+@permission_required("settings.system")
+def maintenance():
+    from app.models.settings import SystemSetting
+    if request.method == "POST":
+        enabled = request.form.get("maintenance_mode") in ("1", "on", "true", "True")
+        SystemSetting.set("maintenance_mode", "1" if enabled else "0")
+        SystemSetting.set("maintenance_message", (request.form.get("maintenance_message") or "").strip())
+        # logo / favicon upload via local or URL
+        logo = request.form.get("logo_url", "").strip()
+        fav = request.form.get("favicon_url", "").strip()
+        f = request.files.get("logo_file")
+        if f and f.filename:
+            try:
+                from app.utils.uploads import save_upload
+                logo = save_upload(f, "logos")
+            except Exception:
+                pass
+        f2 = request.files.get("favicon_file")
+        if f2 and f2.filename:
+            try:
+                from app.utils.uploads import save_upload
+                fav = save_upload(f2, "logos")
+            except Exception:
+                pass
+        if logo:
+            SystemSetting.set("logo_url", logo)
+        if fav:
+            SystemSetting.set("favicon_url", fav)
+        flash("Maintenance settings saved.", "success")
+        return redirect(url_for("settings.maintenance"))
+    return render_template(
+        "settings/maintenance.html",
+        maintenance_mode=SystemSetting.get("maintenance_mode") == "1",
+        maintenance_message=SystemSetting.get("maintenance_message") or "We are under maintenance. Please check back soon.",
+        logo_url=SystemSetting.get("logo_url") or "",
+        favicon_url=SystemSetting.get("favicon_url") or "",
+    )

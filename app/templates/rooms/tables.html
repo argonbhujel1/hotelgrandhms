@@ -4,7 +4,10 @@
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
   <h2>Restaurant Tables</h2>
   {% if current_user.has_permission('rooms.add') %}
-  <a href="{{ url_for('rooms.add_table') }}" class="btn btn-primary">+ Add Table</a>
+  <div style="display:flex;gap:.5rem">
+    <a href="{{ url_for('rooms.bulk_add_tables') }}" class="btn btn-outline">Bulk add tables</a>
+    <a href="{{ url_for('rooms.add_table') }}" class="btn btn-primary">+ Add Table</a>
+  </div>
   {% endif %}
 </div>
 <div class="panel">

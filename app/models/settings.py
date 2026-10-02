@@ -3,6 +3,8 @@ from app import db
 
 
 class BusinessSettings(db.Model):
+    # maintenance_mode, logo_url, favicon_url added below as columns where possible
+
     __tablename__ = "business_settings"
     id = db.Column(db.Integer, primary_key=True)
     hotel_name = db.Column(db.String(150), default="HOTEL GRAND GARDEN")
@@ -96,3 +98,27 @@ class WorkingHoursSettings(db.Model):
             db.session.add(s)
             db.session.commit()
         return s
+
+
+
+class SystemSetting(db.Model):
+    """Key-value for maintenance mode, branding, etc."""
+    __tablename__ = "system_settings"
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(80), unique=True, nullable=False, index=True)
+    value = db.Column(db.Text)
+
+    @staticmethod
+    def get(key, default=None):
+        row = SystemSetting.query.filter_by(key=key).first()
+        return row.value if row else default
+
+    @staticmethod
+    def set(key, value):
+        row = SystemSetting.query.filter_by(key=key).first()
+        if not row:
+            row = SystemSetting(key=key)
+            db.session.add(row)
+        row.value = value if value is None else str(value)
+        db.session.commit()
+        return row

