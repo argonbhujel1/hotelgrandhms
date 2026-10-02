@@ -12,7 +12,64 @@
         <input type="checkbox" name="perm" value="{{ p.id }}"
           {% if p.id in role_perm_ids or extra.get(p.id) %}checked{% endif %}
           {% if p.id in role_perm_ids %}disabled{% endif %}>
-        {{ p.code }}
+        {% set labels = {
+  'dashboard.view': 'View dashboard',
+  'rooms.view': 'View rooms & tables',
+  'rooms.add': 'Add rooms / tables',
+  'rooms.edit': 'Edit rooms / tables',
+  'rooms.status': 'Change room status',
+  'rooms.qr': 'Manage QR codes',
+  'bookings.view': 'View bookings',
+  'bookings.create': 'Create bookings',
+  'bookings.edit': 'Edit bookings',
+  'bookings.checkin': 'Check-in guests',
+  'bookings.checkout': 'Check-out guests',
+  'bookings.payment': 'Record booking payment',
+  'menu.view': 'View menu',
+  'menu.add': 'Add menu items',
+  'menu.edit': 'Edit menu items',
+  'menu.delete': 'Delete menu items',
+  'orders.view': 'View orders',
+  'orders.details': 'View order details',
+  'orders.status': 'Change order status',
+  'kitchen.view': 'Kitchen display',
+  'kitchen.accept': 'Accept kitchen orders',
+  'kitchen.preparing': 'Mark preparing',
+  'kitchen.ready': 'Mark ready',
+  'kitchen.delivered': 'Mark delivered',
+  'kitchen.completed': 'Mark completed',
+  'pos.open': 'Open POS screen',
+  'pos.create': 'Create POS orders',
+  'pos.discount': 'Apply POS discount',
+  'pos.service': 'Apply service charge',
+  'pos.hold': 'Hold POS order',
+  'pos.complete': 'Complete sale & send to billing',
+  'billing.view': 'View bills',
+  'billing.create': 'Create bills',
+  'billing.complete': 'Complete billing',
+  'billing.print': 'Print bills',
+  'billing.reprint': 'Reprint bills',
+  'staff.view': 'View staff list',
+  'staff.add': 'Add staff',
+  'staff.edit': 'Edit staff',
+  'staff.permissions': 'Manage staff permissions',
+  'staff.reset_pw': 'Reset staff password',
+  'attendance.view': 'View attendance',
+  'leave.view': 'View leave requests',
+  'break.view': 'View breaks',
+  'overtime.view': 'View overtime',
+  'salary.view': 'View salary / payslip',
+  'salary.create': 'Finalize payroll',
+  'salary.edit': 'Edit payroll',
+  'salary.payment': 'Record salary payment',
+  'salary.increment': 'Give salary increment',
+  'salary.reports': 'See all staff salaries',
+  'settings.view': 'View settings',
+  'settings.business': 'Edit business settings',
+  'settings.tax': 'Edit tax settings'
+} %}
+        <strong>{{ labels.get(p.code, p.code) }}</strong>
+        <div style="font-size:.75rem;color:var(--muted)">{{ p.code }}</div>
         {% if p.id in role_perm_ids %}<small style="color:var(--muted)">(role)</small>{% endif %}
       </label>
       {% endfor %}

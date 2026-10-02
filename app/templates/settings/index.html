@@ -1,5 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Settings{% endblock %}
+{% block title %}Settings
+<div class="panel" style="margin-top:1.5rem;border-color:#fca5a5">
+  <div class="panel-header" style="color:#b91c1c">Danger zone</div>
+  <div class="panel-body">
+    <p style="font-size:.9rem;color:var(--muted);margin-bottom:.75rem">Wipe all orders, bills and bookings. Staff, menu and rooms stay.</p>
+    <a href="{{ url_for('settings.clear_data') }}" class="btn btn-outline" style="border-color:#ef4444;color:#b91c1c">Clear all orders / bookings / sales</a>
+  </div>
+</div>
+{% endblock %}
 {% block content %}
 <h2 style="margin-bottom:1rem">Settings</h2>
 <div class="cards">
@@ -15,5 +23,13 @@
   {% if current_user.has_permission('settings.system') %}
   <a href="{{ url_for('settings.working_hours') }}" class="card" style="text-decoration:none;color:inherit"><div class="label">Working Hours</div><div class="value" style="font-size:1rem">Attendance rules</div></a>
   {% endif %}
+</div>
+
+<div class="panel" style="margin-top:1.5rem;border-color:#fca5a5">
+  <div class="panel-header" style="color:#b91c1c">Danger zone</div>
+  <div class="panel-body">
+    <p style="font-size:.9rem;color:var(--muted);margin-bottom:.75rem">Wipe all orders, bills and bookings. Staff, menu and rooms stay.</p>
+    <a href="{{ url_for('settings.clear_data') }}" class="btn btn-outline" style="border-color:#ef4444;color:#b91c1c">Clear all orders / bookings / sales</a>
+  </div>
 </div>
 {% endblock %}

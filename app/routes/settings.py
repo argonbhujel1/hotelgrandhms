@@ -155,3 +155,48 @@ def edit_payment_method(mid):
         db.session.commit()
         flash("Payment method updated.", "success")
     return redirect(url_for("settings.payment_methods"))
+
+
+
+@settings_bp.route("/clear-data", methods=["GET", "POST"])
+@login_required
+@permission_required("settings.business")
+def clear_data():
+    """Danger zone: wipe orders, bills, folios, bookings (not staff/menu/rooms)."""
+    if getattr(current_user, "role_code", None) not in ("super_admin", "admin") and not getattr(current_user, "is_admin", False):
+        flash("Only admin can clear operational data.", "danger")
+        return redirect(url_for("settings.index"))
+    if request.method == "POST":
+        confirm = (request.form.get("confirm") or "").strip().upper()
+        if confirm != "CLEAR":
+            flash('Type CLEAR to confirm.', "danger")
+            return render_template("settings/clear_data.html")
+        from sqlalchemy import text
+        try:
+            # Order matters for FKs
+            tables = [
+                "order_status_history",
+                "order_items",
+                "orders",
+                "folio_charges",
+                "bills",
+                "folios",
+                "bookings",
+            ]
+            for tbl in tables:
+                try:
+                    db.session.execute(text(f"DELETE FROM {tbl}"))
+                except Exception:
+                    db.session.rollback()
+                    try:
+                        db.session.execute(text(f"TRUNCATE TABLE {tbl} CASCADE"))
+                    except Exception:
+                        db.session.rollback()
+            db.session.commit()
+            log_audit("clear_operational_data", module="settings")
+            flash("All orders, bills, folios and bookings cleared.", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Clear failed: {e}", "danger")
+        return redirect(url_for("settings.clear_data"))
+    return render_template("settings/clear_data.html")

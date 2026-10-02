@@ -68,7 +68,7 @@
       </div>
       <div id="folioBanner" style="display:none;background:#fff8e6;border:1px solid var(--gold);border-radius:8px;padding:.65rem;margin-bottom:.75rem;font-size:.85rem"></div>
       <div class="form-group"><label>Customer name</label><input id="posCustomer" placeholder="Name"></div>
-      <div class="form-group"><label>Customer email (required)</label><input id="posEmail" type="email" placeholder="guest@email.com" required></div>
+      <div class="form-group" id="posEmailWrap"><label>Customer email <span id="emailReqHint">(required for counter)</span></label><input id="posEmail" type="email" placeholder="guest@email.com"></div>
 
       <div style="font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.35rem">ITEMS IN CART</div>
       <div id="cartLines" style="max-height:200px;overflow-y:auto;min-height:48px;margin-bottom:.5rem"></div>
@@ -86,7 +86,7 @@
       <div class="form-group"><label>Amount Received</label><input id="posReceived" type="number" step="0.01" value="0"></div>
 
       <button type="button" class="btn btn-primary btn-block" id="btnSale" style="margin-bottom:.4rem;padding:.7rem;font-size:1rem">
-        Complete Sale &amp; Print
+        Complete sales &amp; send email
       </button>
       <button type="button" class="btn btn-dark btn-block" id="btnAddOpen" style="display:none;margin-bottom:.4rem">
         Add to Open Bill (keep open)
@@ -217,6 +217,18 @@
   $("posDiscount").addEventListener("input", renderCart);
 
   function updateSourceUI() {
+    var emailWrap = $("posEmailWrap");
+    var emailHint = $("emailReqHint");
+    if (emailWrap) {
+      if ($("posSource").value === "COUNTER") {
+        emailWrap.style.display = "";
+        if (emailHint) emailHint.textContent = "(required for counter)";
+      } else {
+        emailWrap.style.display = "none";
+        if (emailHint) emailHint.textContent = "(from QR order)";
+      }
+    }
+
     var s = $("posSource").value;
     $("roomSelect").style.display = s === "ROOM" ? "block" : "none";
     $("tableSelect").style.display = s === "TABLE" ? "block" : "none";
@@ -226,9 +238,9 @@
       $("btnCloseOnly").style.display = "none";
       $("folioBanner").style.display = "none";
       currentFolioId = null;
-      $("btnSale").textContent = "Complete Sale & Print";
+      $("btnSale").textContent = "Complete sales & send email";
     } else {
-      $("btnSale").textContent = "Add & Close Bill / Print";
+      $("btnSale").textContent = "Complete sales & send to billing";
       loadFolio();
     }
   }
@@ -273,13 +285,14 @@
       alert("Please select food/drinks from the left first.");
       return;
     }
+    var s = $("posSource").value;
     var emailVal = ($("posEmail") && $("posEmail").value || "").trim();
-    if (!emailVal) {
-      alert("Customer email is required (bill will be emailed).");
+    if (s === "COUNTER" && !emailVal) {
+      alert("Customer email is required for counter (bill will be emailed).");
       if ($("posEmail")) $("posEmail").focus();
       return;
     }
-    var s = $("posSource").value;
+
     var body = {
       source: s,
       room_id: s === "ROOM" ? $("posRoom").value : null,
@@ -306,7 +319,7 @@
           return;
         }
         var msg = "Order " + d.order_number;
-        if (d.billed) msg += "\nBill " + d.bill_number + "\nRs. " + d.total + "\nBill emailed to customer.";
+        if (d.billed) msg += "\nBill " + d.bill_number + "\nRs. " + d.total + "\nSent to billing" + (emailVal ? " & emailed guest" : "");
         else msg += "\nAdded to open bill\nFolio total Rs. " + d.folio_total;
         alert(msg);
         cart = {};
@@ -333,11 +346,6 @@
       return;
     }
     var emailVal = ($("posEmail") && $("posEmail").value || "").trim();
-    if (!emailVal) {
-      alert("Customer email is required (bill will be emailed).");
-      if ($("posEmail")) $("posEmail").focus();
-      return;
-    }
     fetch(URL_CLOSE, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
@@ -355,7 +363,7 @@
           alert(d.error || "Failed");
           return;
         }
-        alert("Bill " + d.bill_number + " · Rs. " + d.total + "\nBill emailed to customer.");
+        alert("Bill " + d.bill_number + " · Rs. " + d.total + (d.emailed ? "\nBill emailed to guest." : "\n(No email on file — bill saved only)"));
         loadFolio();
       });
   });

@@ -120,8 +120,19 @@ def checkout():
     payment_method = data.get("payment_method") or "cash"
     amount_received = data.get("amount_received")
     customer_email = (data.get("customer_email") or data.get("email") or "").strip()
-    if not customer_email:
-        return jsonify({"ok": False, "error": "Customer email is required."}), 400
+    # Counter: email required from staff. Room/Table: use QR guest email if not provided.
+    if source == "COUNTER" and not customer_email:
+        return jsonify({"ok": False, "error": "Customer email is required for counter sales."}), 400
+    if source in ("ROOM", "TABLE") and not customer_email:
+        from app.models.order import Order
+        q = Order.query.filter(Order.status != "CANCELLED")
+        if room_id:
+            q = q.filter_by(room_id=room_id)
+        if table_id:
+            q = q.filter_by(table_id=table_id)
+        prev = q.order_by(Order.id.desc()).first()
+        if prev and prev.customer_email:
+            customer_email = prev.customer_email
 
     try:
         folio = get_or_open_folio(
@@ -137,7 +148,7 @@ def checkout():
             room_id=room_id,
             table_id=table_id,
             customer_name=data.get("customer_name"),
-            customer_email=customer_email,
+            customer_email=customer_email or None,
             special_instructions=data.get("notes"),
             discount=Decimal(str(data.get("discount") or 0)),
             created_by_id=current_user.id,
@@ -167,7 +178,8 @@ def checkout():
             )
             bill_id = bill.id
             bill_number = bill.bill_number
-            _email_bill(bill, customer_email)
+            if customer_email:
+                _email_bill(bill, customer_email)
 
         log_activity("pos_checkout", module="pos", record_id=order.id)
         return jsonify({
@@ -200,13 +212,11 @@ def close_folio():
     try:
         email = (data.get("customer_email") or data.get("email") or "").strip()
         if not email:
-            # try from latest order on folio
             for o in reversed(list(folio.orders or [])):
                 if getattr(o, "customer_email", None):
                     email = o.customer_email
                     break
-        if not email:
-            return jsonify({"ok": False, "error": "Customer email is required to send bill."}), 400
+        # Room/Table may still miss email if QR order had none — still allow close but skip mail
         bill = close_folio_and_bill(
             folio,
             payment_method=data.get("payment_method") or "cash",
@@ -214,8 +224,11 @@ def close_folio():
             user=current_user,
             discount=Decimal(str(data.get("discount") or 0)),
         )
-        _email_bill(bill, email)
+        emailed = False
+        if email:
+            _email_bill(bill, email)
+            emailed = True
         log_activity("close_folio", module="pos", record_id=folio.id)
-        return jsonify({"ok": True, "bill_id": bill.id, "bill_number": bill.bill_number, "total": str(bill.total), "emailed": True})
+        return jsonify({"ok": True, "bill_id": bill.id, "bill_number": bill.bill_number, "total": str(bill.total), "emailed": emailed})
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400

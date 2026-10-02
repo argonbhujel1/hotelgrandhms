@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Clear Data{% endblock %}
+{% block content %}
+<h2 style="margin-bottom:1rem">Clear orders / bookings / sales</h2>
+<div class="panel" style="max-width:560px">
+  <div class="panel-body">
+    <p style="color:#b45309;font-weight:600">Warning: This permanently deletes:</p>
+    <ul>
+      <li>All food / drink orders</li>
+      <li>All bills and sales</li>
+      <li>All open and closed folios</li>
+      <li>All room bookings</li>
+    </ul>
+    <p style="color:var(--muted);font-size:.9rem">Staff accounts, menu, rooms, tables and settings are <strong>not</strong> deleted.</p>
+    <form method="post" onsubmit="return confirm('Really delete all orders, bills and bookings?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label>Type <code>CLEAR</code> to confirm</label>
+        <input name="confirm" autocomplete="off" placeholder="CLEAR" required>
+      </div>
+      <button type="submit" class="btn btn-danger">Clear all orders / bookings / sales</button>
+      <a href="{{ url_for('settings.index') }}" class="btn btn-outline">Cancel</a>
+    </form>
+  </div>
+</div>
+{% endblock %}
