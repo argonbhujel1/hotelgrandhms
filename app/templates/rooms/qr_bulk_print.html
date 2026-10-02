@@ -15,7 +15,7 @@
     }
     .card img { width: 160px; height: 160px; object-fit: contain; }
     .card .label { font-weight: 700; font-size: 1.1rem; margin-top: 8px; }
-    .card .hint { font-size: 0.75rem; color: #666; margin-top: 4px; word-break: break-all; }
+    .card .hint { font-size: 0.8rem; color: #333; margin-top: 6px; line-height: 1.35; }
     h1 { font-size: 1.25rem; margin: 0 0 12px; }
     @media print {
       .toolbar { display: none; }
@@ -41,7 +41,7 @@
     <div class="card">
       <img src="{{ url_for('rooms.qr_image', qr_id=qr.id) }}" alt="{{ qr.label }}">
       <div class="label">{{ qr.label }}</div>
-      <div class="hint">Scan to order</div>
+      <div class="hint"><strong>Scan to order</strong><br>Please make an order from here — it's a humble request.</div>
     </div>
     {% endfor %}
   </div>
