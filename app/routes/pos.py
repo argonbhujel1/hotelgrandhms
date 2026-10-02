@@ -17,14 +17,33 @@ pos_bp = Blueprint("pos", __name__)
 @login_required
 @permission_required("pos.open")
 def index():
-    categories = MenuCategory.query.filter_by(is_active=True).order_by(MenuCategory.sort_order).all()
-    items = MenuItem.query.filter_by(is_active=True, is_available=True).order_by(MenuItem.sort_order, MenuItem.name).all()
-    if not items:
-        # Fallback: any active items (help when availability flag was left off)
-        items = MenuItem.query.filter_by(is_active=True).order_by(MenuItem.sort_order, MenuItem.name).all()
-    rooms = Room.query.filter_by(is_active=True).order_by(Room.number).all()
-    tables = RestaurantTable.query.filter_by(is_active=True).order_by(RestaurantTable.number).all()
-    open_folios = Folio.query.filter_by(status="open").all()
+    try:
+        categories = MenuCategory.query.filter_by(is_active=True).order_by(MenuCategory.sort_order).all()
+    except Exception:
+        db.session.rollback()
+        categories = []
+    try:
+        items = MenuItem.query.filter_by(is_active=True, is_available=True).order_by(MenuItem.sort_order, MenuItem.name).all()
+        if not items:
+            items = MenuItem.query.filter_by(is_active=True).order_by(MenuItem.sort_order, MenuItem.name).all()
+    except Exception:
+        db.session.rollback()
+        items = []
+    try:
+        rooms = Room.query.filter_by(is_active=True).order_by(Room.number).all()
+    except Exception:
+        db.session.rollback()
+        rooms = []
+    try:
+        tables = RestaurantTable.query.filter_by(is_active=True).order_by(RestaurantTable.number).all()
+    except Exception:
+        db.session.rollback()
+        tables = []
+    try:
+        open_folios = Folio.query.filter_by(status="open").all()
+    except Exception:
+        db.session.rollback()
+        open_folios = []
     folio_map = {}
     for f in open_folios:
         if f.room_id:

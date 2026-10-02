@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title }} — Bulk Print</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; color: #111; }
+    .toolbar { margin-bottom: 16px; display: flex; gap: 8px; align-items: center; }
+    .toolbar button { padding: 8px 16px; font-size: 14px; cursor: pointer; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card {
+      border: 1px solid #ddd; border-radius: 12px; padding: 16px;
+      text-align: center; page-break-inside: avoid; break-inside: avoid;
+    }
+    .card img { width: 160px; height: 160px; object-fit: contain; }
+    .card .label { font-weight: 700; font-size: 1.1rem; margin-top: 8px; }
+    .card .hint { font-size: 0.75rem; color: #666; margin-top: 4px; word-break: break-all; }
+    h1 { font-size: 1.25rem; margin: 0 0 12px; }
+    @media print {
+      .toolbar { display: none; }
+      body { padding: 0; }
+      .grid { gap: 12px; }
+    }
+    @media (max-width: 800px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <h1 style="flex:1">{{ title }} ({{ qrs|length }})</h1>
+    <button type="button" onclick="window.print()">Print</button>
+    <button type="button" onclick="window.close()">Close</button>
+  </div>
+  {% if not qrs %}
+  <p>No active {{ kind }} QR codes. Create rooms/tables first.</p>
+  {% else %}
+  <div class="grid">
+    {% for qr in qrs %}
+    <div class="card">
+      <img src="{{ url_for('rooms.qr_image', qr_id=qr.id) }}" alt="{{ qr.label }}">
+      <div class="label">{{ qr.label }}</div>
+      <div class="hint">Scan to order</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <script>/* optional auto print: window.onload=()=>window.print() */</script>
+</body>
+</html>

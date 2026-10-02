@@ -117,8 +117,17 @@ def delete_room(room_id):
 @login_required
 @permission_required("rooms.qr")
 def qr_list():
-    rooms = Room.query.filter_by(is_active=True).order_by(Room.number).all()
-    tables = RestaurantTable.query.filter_by(is_active=True).order_by(RestaurantTable.number).all()
+    """List active QR codes for rooms and tables."""
+    try:
+        rooms = Room.query.filter_by(is_active=True).order_by(Room.number).all()
+    except Exception:
+        db.session.rollback()
+        rooms = []
+    try:
+        tables = RestaurantTable.query.filter_by(is_active=True).order_by(RestaurantTable.number).all()
+    except Exception:
+        db.session.rollback()
+        tables = []
     public_site_url = current_app.config.get("HMS_SITE_URL") or current_app.config.get("PUBLIC_SITE_URL", "https://hms.hotelgrand.com.np")
     public_site_url = public_site_url.rstrip("/")
     return render_template("rooms/qr_list.html", rooms=rooms, tables=tables, public_site_url=public_site_url)
@@ -150,7 +159,12 @@ def regenerate_qr(qr_id):
 @login_required
 @permission_required("rooms.view")
 def list_tables():
-    tables = RestaurantTable.query.filter_by(is_active=True).order_by(RestaurantTable.number).all()
+    try:
+        tables = RestaurantTable.query.filter_by(is_active=True).order_by(RestaurantTable.number).all()
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Tables load issue: {e}", "danger")
+        tables = []
     return render_template("rooms/tables.html", tables=tables)
 
 
@@ -249,3 +263,46 @@ def generate_table_qr(table_id):
     flash(f"QR generated for Table {t.number}.", "success")
     return redirect(url_for("rooms.qr_list"))
 
+
+
+
+@rooms_bp.route("/qr/bulk-print/rooms")
+@login_required
+@permission_required("rooms.qr")
+def qr_bulk_print_rooms():
+    """Print sheet of all active room QR codes."""
+    from app.models.room import QRCode
+    qrs = (
+        QRCode.query.filter_by(source_type="room", is_active=True)
+        .order_by(QRCode.room_id)
+        .all()
+    )
+    public = (current_app.config.get("HMS_SITE_URL") or "https://hms.hotelgrand.com.np").rstrip("/")
+    return render_template(
+        "rooms/qr_bulk_print.html",
+        qrs=qrs,
+        kind="rooms",
+        title="Room QR Codes",
+        public_base=public,
+    )
+
+
+@rooms_bp.route("/qr/bulk-print/tables")
+@login_required
+@permission_required("rooms.qr")
+def qr_bulk_print_tables():
+    """Print sheet of all active table QR codes."""
+    from app.models.room import QRCode
+    qrs = (
+        QRCode.query.filter_by(source_type="table", is_active=True)
+        .order_by(QRCode.table_id)
+        .all()
+    )
+    public = (current_app.config.get("HMS_SITE_URL") or "https://hms.hotelgrand.com.np").rstrip("/")
+    return render_template(
+        "rooms/qr_bulk_print.html",
+        qrs=qrs,
+        kind="tables",
+        title="Table QR Codes",
+        public_base=public,
+    )
