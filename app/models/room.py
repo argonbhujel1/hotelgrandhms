@@ -14,7 +14,7 @@ class Room(db.Model):
     amenities = db.Column(db.Text)  # JSON or comma-separated
     image_path = db.Column(db.String(255))
     image_url = db.Column(db.String(500))
-    show_on_website = db.Column(db.Boolean, default=True)
+    show_on_website = db.Column(db.Boolean, default=False)  # HMS rooms stay internal unless public admin enables
     status = db.Column(db.String(20), default="available", index=True)
     # available, occupied, reserved, maintenance, disabled
     is_active = db.Column(db.Boolean, default=True)

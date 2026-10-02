@@ -36,7 +36,11 @@
         <button type="submit" class="btn btn-primary">Save</button>
         <a href="{{ url_for('rooms.list_rooms') }}" class="btn btn-outline">Cancel</a>
       </div>
-    </form>
+      <div class="form-group">
+    <label><input type="checkbox" name="show_on_website" value="1" {% if room and room.show_on_website %}checked{% endif %}> Show on public website</label>
+    <small class="muted">Leave unchecked for HMS-only rooms (QR / ops). Public admin manages website rooms.</small>
+  </div>
+</form>
   </div>
 </div>
 {% endblock %}
