@@ -1,4 +1,5 @@
-from datetime import datetime, date
+from datetime import datetime
+from app.utils.timeutil import npt_now_naive, date
 from app import db
 
 
@@ -14,7 +15,7 @@ class Folio(db.Model):
     customer_name = db.Column(db.String(150))
     status = db.Column(db.String(20), default="open", index=True)  # open, closed
     notes = db.Column(db.Text)
-    opened_at = db.Column(db.DateTime, default=datetime.utcnow)
+    opened_at = db.Column(db.DateTime, default=npt_now_naive)
     closed_at = db.Column(db.DateTime)
     opened_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     closed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
@@ -71,7 +72,7 @@ class FolioCharge(db.Model):
     description = db.Column(db.String(255))
     charge_date = db.Column(db.Date, default=date.today)
     amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
 
     folio = db.relationship("Folio", back_populates="charges")

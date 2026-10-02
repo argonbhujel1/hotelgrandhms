@@ -20,3 +20,8 @@ def format_npt(dt, fmt="%d %b %Y %H:%M") -> str:
     if dt is None:
         return ""
     return utc_to_npt(dt).strftime(fmt)
+
+
+def npt_now_naive() -> datetime:
+    """Naive datetime showing Nepal wall-clock time (for DB storage)."""
+    return now_npt().replace(tzinfo=None)

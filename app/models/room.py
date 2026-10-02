@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.utils.timeutil import npt_now_naive
 import secrets
 from app import db
 
@@ -17,8 +18,8 @@ class Room(db.Model):
     status = db.Column(db.String(20), default="available", index=True)
     # available, occupied, reserved, maintenance, disabled
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
+    updated_at = db.Column(db.DateTime, default=npt_now_naive, onupdate=npt_now_naive)
 
     qr_codes = db.relationship("QRCode", back_populates="room", cascade="all, delete-orphan")
     bookings = db.relationship("Booking", back_populates="room")
@@ -32,8 +33,8 @@ class RestaurantTable(db.Model):
     status = db.Column(db.String(20), default="available", index=True)
     # available, occupied, reserved, cleaning, disabled
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
+    updated_at = db.Column(db.DateTime, default=npt_now_naive, onupdate=npt_now_naive)
 
     qr_codes = db.relationship("QRCode", back_populates="table", cascade="all, delete-orphan")
 
@@ -46,7 +47,7 @@ class QRCode(db.Model):
     room_id = db.Column(db.Integer, db.ForeignKey("rooms.id"), index=True)
     table_id = db.Column(db.Integer, db.ForeignKey("restaurant_tables.id"), index=True)
     is_active = db.Column(db.Boolean, default=True, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
     regenerated_at = db.Column(db.DateTime)
 
     room = db.relationship("Room", back_populates="qr_codes")

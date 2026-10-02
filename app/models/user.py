@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.utils.timeutil import npt_now_naive
 from flask_login import UserMixin
 from app import db
 
@@ -9,7 +10,7 @@ class Role(db.Model):
     code = db.Column(db.String(50), unique=True, nullable=False, index=True)
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
     users = db.relationship("User", back_populates="role")
     permissions = db.relationship("RolePermission", back_populates="role", cascade="all, delete-orphan")
@@ -63,8 +64,8 @@ class User(UserMixin, db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=False)
     is_active = db.Column(db.Boolean, default=True, index=True)
     joining_date = db.Column(db.Date)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
+    updated_at = db.Column(db.DateTime, default=npt_now_naive, onupdate=npt_now_naive)
     last_login_at = db.Column(db.DateTime)
     device_label = db.Column(db.String(100))  # e.g. Reception PC
 
@@ -113,8 +114,8 @@ class StaffSession(db.Model):
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.String(512))
     device_label = db.Column(db.String(100))
-    login_at = db.Column(db.DateTime, default=datetime.utcnow)
-    last_activity = db.Column(db.DateTime, default=datetime.utcnow)
+    login_at = db.Column(db.DateTime, default=npt_now_naive)
+    last_activity = db.Column(db.DateTime, default=npt_now_naive)
     is_active = db.Column(db.Boolean, default=True, index=True)
     status = db.Column(db.String(20), default="online")  # online, idle, offline
 
@@ -128,4 +129,4 @@ class StaffLoginHistory(db.Model):
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.String(512))
     success = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)

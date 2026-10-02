@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.utils.timeutil import npt_now_naive
 from app import db
 
 
@@ -21,8 +22,8 @@ class Booking(db.Model):
     notes = db.Column(db.Text)
     id_document = db.Column(db.String(100))
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
+    updated_at = db.Column(db.DateTime, default=npt_now_naive, onupdate=npt_now_naive)
 
     # Website extras (shared DB — public site writes these)
     booking_ref = db.Column(db.String(32), index=True)

@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.utils.timeutil import npt_now_naive
 from app import db
 
 
@@ -8,7 +9,7 @@ class MenuCategory(db.Model):
     name = db.Column(db.String(100), nullable=False)
     sort_order = db.Column(db.Integer, default=0)
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
     items = db.relationship("MenuItem", back_populates="category")
 
@@ -28,8 +29,8 @@ class MenuItem(db.Model):
     sort_order = db.Column(db.Integer, default=0)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     updated_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
+    updated_at = db.Column(db.DateTime, default=npt_now_naive, onupdate=npt_now_naive)
     is_active = db.Column(db.Boolean, default=True)
 
     category = db.relationship("MenuCategory", back_populates="items")

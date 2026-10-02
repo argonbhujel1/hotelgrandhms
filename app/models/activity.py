@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.utils.timeutil import npt_now_naive
 from app import db
 
 
@@ -14,7 +15,7 @@ class ActivityLog(db.Model):
     record_id = db.Column(db.Integer)
     details = db.Column(db.Text)
     ip_address = db.Column(db.String(45))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=npt_now_naive, index=True)
 
 
 class AuditLog(db.Model):
@@ -30,7 +31,7 @@ class AuditLog(db.Model):
     previous_value = db.Column(db.Text)
     new_value = db.Column(db.Text)
     ip_address = db.Column(db.String(45))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=npt_now_naive, index=True)
 
 
 class SecurityEvent(db.Model):
@@ -41,4 +42,4 @@ class SecurityEvent(db.Model):
     details = db.Column(db.Text)
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.String(512))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=npt_now_naive, index=True)

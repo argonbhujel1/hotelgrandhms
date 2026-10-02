@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.utils.timeutil import npt_now_naive
 from app import db
 
 
@@ -43,7 +44,7 @@ class Bill(db.Model):
     is_reprint = db.Column(db.Boolean, default=False)
     generated_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     generated_by_name = db.Column(db.String(150))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    created_at = db.Column(db.DateTime, default=npt_now_naive, index=True)
 
     order = db.relationship("Order", back_populates="bill")
     folio = db.relationship("Folio", back_populates="bill")
@@ -65,6 +66,6 @@ class Payment(db.Model):
     reference = db.Column(db.String(100))
     notes = db.Column(db.String(255))
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
     bill = db.relationship("Bill", back_populates="payments")

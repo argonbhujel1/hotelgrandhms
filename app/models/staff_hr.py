@@ -1,4 +1,5 @@
-from datetime import datetime, date
+from datetime import datetime
+from app.utils.timeutil import npt_now_naive, date
 from app import db
 
 
@@ -14,7 +15,7 @@ class StaffSalaryProfile(db.Model):
     work_start = db.Column(db.String(10))  # e.g. 10:00
     work_end = db.Column(db.String(10))
     required_daily_hours = db.Column(db.Numeric(4, 2))
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=npt_now_naive, onupdate=npt_now_naive)
 
     user = db.relationship("User", back_populates="salary_profile")
 
@@ -36,7 +37,7 @@ class SalaryIncrement(db.Model):
     effective_from = db.Column(db.Date, nullable=False)
     reason = db.Column(db.Text)
     updated_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
 
 class SalaryRecord(db.Model):
@@ -75,8 +76,8 @@ class SalaryRecord(db.Model):
     worked_hours = db.Column(db.Numeric(8, 2), default=0)
     finalized_at = db.Column(db.DateTime)
     finalized_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
+    updated_at = db.Column(db.DateTime, default=npt_now_naive, onupdate=npt_now_naive)
 
     __table_args__ = (db.UniqueConstraint("user_id", "year", "month"),)
 
@@ -90,7 +91,7 @@ class SalaryDeduction(db.Model):
     reason = db.Column(db.Text)
     deduction_month = db.Column(db.Date)  # first of month
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
 
 class StaffConsumption(db.Model):
@@ -109,7 +110,7 @@ class StaffConsumption(db.Model):
     status = db.Column(db.String(20), default="pending")  # pending, approved, rejected
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     reviewed_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
 
 class Fine(db.Model):
@@ -123,7 +124,7 @@ class Fine(db.Model):
     calculation_details = db.Column(db.Text)
     status = db.Column(db.String(20), default="active")  # active, waived, adjusted
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
 
 class SalaryAdvance(db.Model):
@@ -137,7 +138,7 @@ class SalaryAdvance(db.Model):
     recovered = db.Column(db.Numeric(12, 2), default=0)
     status = db.Column(db.String(20), default="pending")  # pending, recovered, partial
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
 
 class SalaryPayment(db.Model):
@@ -150,7 +151,7 @@ class SalaryPayment(db.Model):
     reference = db.Column(db.String(100))
     notes = db.Column(db.String(255))
     paid_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    paid_at = db.Column(db.DateTime, default=datetime.utcnow)
+    paid_at = db.Column(db.DateTime, default=npt_now_naive)
 
 
 class Attendance(db.Model):
@@ -169,7 +170,7 @@ class Attendance(db.Model):
     status = db.Column(db.String(20), default="pending")  # pending, approved, rejected
     notes = db.Column(db.Text)
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
     __table_args__ = (db.UniqueConstraint("user_id", "date"),)
 
@@ -193,7 +194,7 @@ class LeaveRequest(db.Model):
     status = db.Column(db.String(20), default="pending")
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     reviewed_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
 
 class BreakRequest(db.Model):
@@ -208,7 +209,7 @@ class BreakRequest(db.Model):
     note = db.Column(db.Text)
     status = db.Column(db.String(20), default="pending")
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
 
 class OvertimeRequest(db.Model):
@@ -223,4 +224,4 @@ class OvertimeRequest(db.Model):
     note = db.Column(db.Text)
     status = db.Column(db.String(20), default="pending")
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)

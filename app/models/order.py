@@ -1,4 +1,5 @@
 from datetime import datetime
+from app.utils.timeutil import npt_now_naive
 from decimal import Decimal
 from app import db
 
@@ -24,8 +25,8 @@ class Order(db.Model):
     vat_rate_at_time = db.Column(db.Numeric(5, 2), default=13)
     folio_id = db.Column(db.Integer, db.ForeignKey("folios.id"), index=True)
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive, index=True)
+    updated_at = db.Column(db.DateTime, default=npt_now_naive, onupdate=npt_now_naive)
     completed_at = db.Column(db.DateTime)
 
     items = db.relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
@@ -72,6 +73,6 @@ class OrderStatusHistory(db.Model):
     status = db.Column(db.String(30), nullable=False)
     changed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     note = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
 
     order = db.relationship("Order", back_populates="status_history")
