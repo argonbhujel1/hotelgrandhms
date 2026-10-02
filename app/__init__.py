@@ -187,6 +187,21 @@ def _ensure_schema_patches():
     from sqlalchemy import text
     statements = [
         "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email VARCHAR(200)",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS booking_ref VARCHAR(32)",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS guest_phone VARCHAR(30)",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS guest_email VARCHAR(150)",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS message TEXT",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS room_type_id INTEGER",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS room_number VARCHAR(20)",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS base_price_snapshot NUMERIC(10,2)",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS total_nights INTEGER",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS nightly_rates TEXT",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS source VARCHAR(30)",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS advance_txn_number VARCHAR(100)",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS advance_paid_claimed BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_proof_url VARCHAR(500)",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_ip VARCHAR(64)",
+        "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS ip_location VARCHAR(255)",
     ]
     try:
         for sql in statements:

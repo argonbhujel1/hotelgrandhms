@@ -10,11 +10,12 @@
 <div class="panel">
   <div class="panel-body table-wrap">
     <table class="data">
-      <thead><tr><th>Guest</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Advance</th><th>Status</th><th></th></tr></thead>
+      <thead><tr><th>Source</th><th>Guest</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Advance</th><th>Status</th><th></th></tr></thead>
       <tbody>
       {% for b in bookings %}
         <tr>
-          <td>{{ b.guest_name }}<br><small>{{ b.phone or '' }}</small></td>
+          <td><span class="badge">{% if b.source == 'website' %}Web{% else %}HMS{% endif %}</span>{% if b.booking_ref %}<br><small>{{ b.booking_ref }}</small>{% endif %}</td>
+          <td>{{ b.guest_name }}<br><small>{{ b.phone or b.guest_phone or '' }}</small></td>
           <td>{{ b.room.number if b.room else '—' }}</td>
           <td>{{ b.check_in.strftime('%d %b %Y %H:%M') if b.check_in else '' }}</td>
           <td>{{ b.check_out.strftime('%d %b %Y %H:%M') if b.check_out else '' }}</td>
