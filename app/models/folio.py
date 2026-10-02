@@ -1,5 +1,6 @@
 from datetime import datetime
-from app.utils.timeutil import npt_now_naive, date
+from datetime import date
+from app.utils.timeutil import npt_now_naive
 from app import db
 
 
