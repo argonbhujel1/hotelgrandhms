@@ -176,9 +176,37 @@ def create_app(config_name=None):
 
     with app.app_context():
         db.create_all()
+        _ensure_schema_patches()
         _seed_if_empty()
 
     return app
+
+
+def _ensure_schema_patches():
+    """Add columns that models expect but older shared DBs may lack."""
+    from sqlalchemy import text
+    statements = [
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email VARCHAR(200)",
+    ]
+    try:
+        for sql in statements:
+            try:
+                db.session.execute(text(sql))
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                # SQLite fallback without IF NOT EXISTS
+                try:
+                    if "customer_email" in sql:
+                        db.session.execute(text("ALTER TABLE orders ADD COLUMN customer_email VARCHAR(200)"))
+                        db.session.commit()
+                except Exception:
+                    db.session.rollback()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
 
 
 def _seed_if_empty():
