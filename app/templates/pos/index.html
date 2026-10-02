@@ -319,7 +319,7 @@
           return;
         }
         var msg = "Order " + d.order_number;
-        if (d.billed) msg += "\nBill " + d.bill_number + "\nRs. " + d.total + "\nSent to billing" + (emailVal ? " & emailed guest" : "");
+        if (d.billed) msg += "\nBill " + d.bill_number + "\nRs. " + d.total + "\nSent to billing. Open Billing to print & email.";
         else msg += "\nAdded to open bill\nFolio total Rs. " + d.folio_total;
         alert(msg);
         cart = {};
@@ -363,7 +363,7 @@
           alert(d.error || "Failed");
           return;
         }
-        alert("Bill " + d.bill_number + " · Rs. " + d.total + (d.emailed ? "\nBill emailed to guest." : "\n(No email on file — bill saved only)"));
+        alert("Bill " + d.bill_number + " · Rs. " + d.total + "\nOpen Billing → Print to print & email guest.");
         loadFolio();
       });
   });

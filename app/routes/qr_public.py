@@ -105,6 +105,25 @@ def _place_order(token):
             special_instructions=data.get("special_instructions"),
             folio_id=folio.id,
         )
+        # Order received email to guest
+        try:
+            from app.services.email_service import notify
+            class _G:
+                email = email
+                full_name = (data.get("customer_name") or "Guest")
+            items_html = "<ul>" + "".join(
+                f"<li>Item #{row.get('id')} x{row.get('qty',1)}</li>" for row in items_raw
+            ) + "</ul>"
+            notify(
+                _G(),
+                "order_received",
+                order_number=order.order_number,
+                total=str(order.total),
+                source=source,
+                items_html=items_html,
+            )
+        except Exception:
+            pass
         return jsonify({
             "ok": True,
             "order_number": order.order_number,

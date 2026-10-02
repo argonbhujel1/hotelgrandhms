@@ -178,7 +178,14 @@ def edit_record(rid):
         rec.basic = Decimal(request.form.get("basic") or rec.basic or 0)
         rec.allowance = Decimal(request.form.get("allowance") or rec.allowance or 0)
         rec.ot_hours = Decimal(request.form.get("ot_hours") or rec.ot_hours or 0)
-        rec.ot_pay = Decimal(request.form.get("ot_pay") or rec.ot_pay or 0)
+        # OT amount from BASIC only (not allowance). Hourly = basic / (working_days * 8)
+        working_days = Decimal(str(rec.working_days or 26))
+        if rec.ot_hours and rec.ot_hours > 0 and rec.basic and working_days > 0:
+            hourly = (rec.basic or 0) / (working_days * Decimal("8"))
+            rec.ot_pay = (hourly * rec.ot_hours).quantize(Decimal("0.01"))
+        else:
+            # manual override only if hours empty
+            rec.ot_pay = Decimal(request.form.get("ot_pay") or rec.ot_pay or 0)
         rec.unpaid_leave_deduction = Decimal(request.form.get("unpaid_leave_deduction") or 0)
         rec.late_deduction = Decimal(request.form.get("late_deduction") or 0)
         rec.early_deduction = Decimal(request.form.get("early_deduction") or 0)

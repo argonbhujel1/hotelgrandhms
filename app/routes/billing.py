@@ -152,3 +152,60 @@ def close_folio(folio_id):
     except ValueError as e:
         flash(str(e), "danger")
         return redirect(url_for("billing.view_folio", folio_id=folio_id))
+
+
+
+def _send_bill_email(bill) -> bool:
+    """Email bill to guest (from order/folio customer_email)."""
+    if not bill:
+        return False
+    to_email = None
+    try:
+        if bill.order and getattr(bill.order, "customer_email", None):
+            to_email = bill.order.customer_email
+        if not to_email and bill.folio:
+            for o in bill.folio.orders or []:
+                if getattr(o, "customer_email", None):
+                    to_email = o.customer_email
+                    break
+        if not to_email:
+            to_email = getattr(bill, "customer_email", None)
+    except Exception:
+        pass
+    if not to_email:
+        return False
+    try:
+        from app.services.email_service import notify
+        class _G:
+            email = to_email
+            full_name = bill.customer_name or "Guest"
+        items_html = ""
+        try:
+            lines = []
+            if bill.order:
+                for i in bill.order.items:
+                    lines.append(f"<li>{i.item_name} x{i.quantity} — Rs. {i.line_total}</li>")
+            if bill.folio:
+                for o in bill.folio.orders:
+                    if o.status == "CANCELLED":
+                        continue
+                    if bill.order and o.id == bill.order.id:
+                        continue
+                    for i in o.items:
+                        lines.append(f"<li>{i.item_name} x{i.quantity} — Rs. {i.line_total}</li>")
+            if lines:
+                items_html = "<ul>" + "".join(lines) + "</ul>"
+        except Exception:
+            items_html = ""
+        notify(
+            _G(),
+            "bill_receipt",
+            bill_number=bill.bill_number,
+            total=str(bill.total),
+            payment_method=bill.payment_method or "—",
+            source=getattr(bill, "source_label", None) or "—",
+            items_html=items_html,
+        )
+        return True
+    except Exception:
+        return False

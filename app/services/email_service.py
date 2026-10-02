@@ -112,6 +112,18 @@ def _settings_ctx():
         }
 
 
+def _hotel_logo_url():
+    try:
+        from app.models.settings import BusinessSettings
+        s = BusinessSettings.get_settings()
+        if s and s.logo_path:
+            if str(s.logo_path).startswith("http"):
+                return s.logo_path
+    except Exception:
+        pass
+    return ""
+
+
 def build_html(
     *,
     subject: str,
@@ -209,6 +221,7 @@ def notify(to_user, event: str, **kwargs) -> bool:
         "password_reset": _password_reset,
         "welcome_staff": _welcome_staff,
         "bill_receipt": _bill_receipt,
+        "order_received": _order_received,
     }
     fn = builders.get(event)
     if not fn:
@@ -516,3 +529,31 @@ def _bill_receipt(name, **kw):
         closing="Thank you — Hotel Grand Garden, Urlabari.",
     )
     return subject, html, f"Bill {bill_number} total Rs. {total}."
+
+
+def _order_received(name, **kw):
+    order_number = kw.get("order_number", "—")
+    total = kw.get("total", "—")
+    source = kw.get("source", "—")
+    items_html = kw.get("items_html", "")
+    subject = f"Order received — {order_number} | Hotel Grand Garden"
+    body = f"""
+      <p>Thank you! We have <strong>received your order</strong>.</p>
+      <p>Our kitchen is preparing it now.</p>
+      {items_html}
+    """
+    details = [
+        ("Order No.", str(order_number)),
+        ("Source", str(source)),
+        ("Total", f"Rs. {total}"),
+    ]
+    html = build_html(
+        subject=subject,
+        title="Order Received",
+        recipient_name=name or "Guest",
+        body_html=body,
+        details=details,
+        highlight=f"Order {order_number}",
+        closing="— Hotel Grand Garden, Urlabari",
+    )
+    return subject, html, f"Order {order_number} received. Total Rs. {total}."

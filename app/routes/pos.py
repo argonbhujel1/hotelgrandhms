@@ -178,9 +178,23 @@ def checkout():
             )
             bill_id = bill.id
             bill_number = bill.bill_number
-            if customer_email:
-                _email_bill(bill, customer_email)
 
+        if customer_email:
+            try:
+                from app.services.email_service import notify
+                class _G:
+                    email = customer_email
+                    full_name = (data.get("customer_name") or "Guest")
+                notify(
+                    _G(),
+                    "order_received",
+                    order_number=order.order_number,
+                    total=str(order.total),
+                    source=source,
+                    items_html="",
+                )
+            except Exception:
+                pass
         log_activity("pos_checkout", module="pos", record_id=order.id)
         return jsonify({
             "ok": True,
@@ -224,11 +238,7 @@ def close_folio():
             user=current_user,
             discount=Decimal(str(data.get("discount") or 0)),
         )
-        emailed = False
-        if email:
-            _email_bill(bill, email)
-            emailed = True
         log_activity("close_folio", module="pos", record_id=folio.id)
-        return jsonify({"ok": True, "bill_id": bill.id, "bill_number": bill.bill_number, "total": str(bill.total), "emailed": emailed})
+        return jsonify({"ok": True, "bill_id": bill.id, "bill_number": bill.bill_number, "total": str(bill.total)})
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400
