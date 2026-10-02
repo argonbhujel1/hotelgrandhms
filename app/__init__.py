@@ -167,6 +167,7 @@ def create_app(config_name=None):
         except Exception:
             pass
         from app.utils.timeutil import format_npt, now_npt
+        app.jinja_env.filters['format_npt'] = format_npt
         return {
             "hotel_settings": settings,
             "current_user": current_user,
@@ -176,6 +177,12 @@ def create_app(config_name=None):
 
     with app.app_context():
         db.create_all()
+
+        try:
+            _ensure_hms_schema()
+        except Exception:
+            pass
+
         _ensure_schema_patches()
         _seed_if_empty()
 
@@ -363,3 +370,23 @@ def _seed_if_empty():
         db.session.add(MenuCategory(name=name, sort_order=i, is_active=True))
 
     db.session.commit()
+
+
+def _ensure_hms_schema():
+    from sqlalchemy import text
+    patches = [
+        "ALTER TABLE rooms ADD COLUMN IF NOT EXISTS floor VARCHAR(20)",
+        "ALTER TABLE rooms ADD COLUMN IF NOT EXISTS show_on_website BOOLEAN DEFAULT FALSE",
+        # Do NOT bulk-update all rooms — public-admin rooms must stay True
+
+        "ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email VARCHAR(255)",
+    ]
+    for sql in patches:
+        try:
+            db.session.execute(text(sql))
+            db.session.commit()
+        except Exception:
+            try:
+                db.session.rollback()
+            except Exception:
+                pass

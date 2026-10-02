@@ -16,7 +16,7 @@ def utc_to_npt(dt: datetime) -> datetime:
     return dt.astimezone(NPT)
 
 
-def format_npt(dt, fmt="%d %b %Y %H:%M") -> str:
+def format_npt(dt, fmt="%d %b %Y, %I:%M %p") -> str:
     if dt is None:
         return ""
     return utc_to_npt(dt).strftime(fmt)

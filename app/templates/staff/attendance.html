@@ -5,9 +5,9 @@
 <div class="panel" style="max-width:400px;margin-bottom:1rem">
   <div class="panel-body">
     {% if today_att and today_att.check_in %}
-      <p>Checked in: {{ today_att.check_in.strftime('%H:%M') }}</p>
+      <p>Checked in: {{ today_att.check_in | format_npt('%H:%M') }}</p>
       {% if today_att.check_out %}
-        <p>Checked out: {{ today_att.check_out.strftime('%H:%M') }}</p>
+        <p>Checked out: {{ today_att.check_out | format_npt('%H:%M') }}</p>
       {% else %}
         <form method="post">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -31,8 +31,8 @@
       {% for r in records %}
         <tr>
           <td>{{ r.date }}</td>
-          <td>{{ r.check_in.strftime('%H:%M') if r.check_in else '—' }}</td>
-          <td>{{ r.check_out.strftime('%H:%M') if r.check_out else '—' }}</td>
+          <td>{{ r.check_in | format_npt('%H:%M') if r.check_in else '—' }}</td>
+          <td>{{ r.check_out | format_npt('%H:%M') if r.check_out else '—' }}</td>
           <td>{{ r.presence_minutes or 0 }}</td>
           <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
         </tr>

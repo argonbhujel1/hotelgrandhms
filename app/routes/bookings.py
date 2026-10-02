@@ -57,6 +57,18 @@ def add_booking():
         db.session.add(b)
         db.session.commit()
         log_activity("create_booking", module="bookings", record_id=b.id)
+        try:
+            from app.services.email_service import notify_admin
+            notify_admin(
+                "admin_new_booking",
+                ref=getattr(b, "booking_ref", None) or b.id,
+                guest=b.guest_name or "Guest",
+                check_in=str(b.check_in),
+                check_out=str(b.check_out),
+                room=str(b.room_id),
+            )
+        except Exception:
+            pass
         flash("Booking created.", "success")
         return redirect(url_for("bookings.list_bookings"))
     return render_template("bookings/form.html", booking=None, rooms=rooms)

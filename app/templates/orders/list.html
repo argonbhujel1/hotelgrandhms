@@ -23,7 +23,7 @@
       {% for o in orders %}
         <tr>
           <td><strong>{{ o.order_number }}</strong></td>
-          <td>{{ o.created_at.strftime('%d %b %H:%M') if o.created_at else '' }}</td>
+          <td>{{ o.created_at | format_npt if o.created_at else '' }}</td>
           <td>{{ o.source_label }}</td>
           <td>{{ o.customer_name or '—' }}</td>
           <td>Rs. {{ o.total }}</td>

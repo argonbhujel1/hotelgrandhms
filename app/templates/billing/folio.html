@@ -4,7 +4,7 @@
 <h2>{{ folio.folio_number }} — {{ folio.label }}
   <span class="badge badge-{{ folio.status }}">{{ folio.status }}</span>
 </h2>
-<p style="color:var(--muted)">Customer: {{ folio.customer_name or '—' }} · Opened: {{ folio.opened_at.strftime('%d %b %Y %H:%M') if folio.opened_at else '' }}</p>
+<p style="color:var(--muted)">Customer: {{ folio.customer_name or '—' }} · Opened: {{ folio.opened_at | format_npt if folio.opened_at else '' }}</p>
 
 <div class="panel" style="margin-top:1rem">
   <div class="panel-header">Orders</div>

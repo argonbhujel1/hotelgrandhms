@@ -14,8 +14,8 @@
           <td><span class="badge badge-{{ s.status }}">{{ s.status }}</span></td>
           <td>{{ s.ip_address or '—' }}</td>
           <td style="font-size:.75rem;max-width:160px;overflow:hidden;text-overflow:ellipsis">{{ s.device_label or (s.user_agent[:40] if s.user_agent else '—') }}</td>
-          <td>{{ s.login_at.strftime('%H:%M') if s.login_at else '' }}</td>
-          <td>{{ s.last_activity.strftime('%H:%M') if s.last_activity else '' }}</td>
+          <td>{{ s.login_at | format_npt('%H:%M') if s.login_at else '' }}</td>
+          <td>{{ s.last_activity | format_npt('%H:%M') if s.last_activity else '' }}</td>
           <td>
             {% if current_user.has_permission('sessions.force_logout') %}
             <form method="post" action="{{ url_for('staff.force_logout', sid=s.id) }}">

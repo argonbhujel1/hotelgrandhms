@@ -8,6 +8,7 @@ class Room(db.Model):
     __tablename__ = "rooms"
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.String(20), unique=True, nullable=False, index=True)
+    floor = db.Column(db.String(20))  # e.g. 1, 2, Ground
     room_type = db.Column(db.String(50), nullable=False)  # Standard, Deluxe, Suite...
     price = db.Column(db.Numeric(12, 2), nullable=False, default=0)
     description = db.Column(db.Text)
@@ -29,6 +30,7 @@ class RestaurantTable(db.Model):
     __tablename__ = "restaurant_tables"
     id = db.Column(db.Integer, primary_key=True)
     number = db.Column(db.String(20), unique=True, nullable=False, index=True)
+    floor = db.Column(db.String(20))  # e.g. 1, 2, Ground
     seating_capacity = db.Column(db.Integer, default=4)
     status = db.Column(db.String(20), default="available", index=True)
     # available, occupied, reserved, cleaning, disabled

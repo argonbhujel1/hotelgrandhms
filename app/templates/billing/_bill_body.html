@@ -11,7 +11,7 @@
       <div>Bill No: {{ bill.bill_number }}</div>
       {% if bill.order %}<div>Order No: {{ bill.order.order_number }}</div>{% endif %}
       <div>Date: {{ bill.created_at.strftime('%d %b %Y') if bill.created_at else '' }}</div>
-      <div>Time: {{ bill.created_at.strftime('%H:%M') if bill.created_at else '' }}</div>
+      <div>Time: {{ bill.created_at | format_npt('%H:%M') if bill.created_at else '' }}</div>
       <div>Customer: {{ bill.customer_name or '—' }}</div>
       <div>Type: {{ bill.source_label }}</div>
     </div>

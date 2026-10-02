@@ -14,7 +14,7 @@
     </div>
     <div class="panel-body">
       <p style="font-weight:700;margin-bottom:.5rem">{{ o.source_label }}{% if o.customer_name %} · {{ o.customer_name }}{% endif %}</p>
-      <p style="font-size:.8rem;color:var(--muted)">{{ o.created_at.strftime('%H:%M') if o.created_at else '' }}</p>
+      <p style="font-size:.8rem;color:var(--muted)">{{ o.created_at | format_npt('%H:%M') if o.created_at else '' }}</p>
       <ul style="list-style:none;margin:.75rem 0">
       {% for i in o.items %}
         <li style="padding:.35rem 0;border-bottom:1px solid #f0eee8;font-size:1.05rem">

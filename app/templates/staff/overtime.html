@@ -24,8 +24,8 @@
       {% for r in requests %}
         <tr>
           <td>{{ r.ot_date }}</td>
-          <td>{{ r.start_time.strftime('%H:%M') if r.start_time else '—' }}</td>
-          <td>{{ r.end_time.strftime('%H:%M') if r.end_time else '—' }}</td>
+          <td>{{ r.start_time | format_npt('%H:%M') if r.start_time else '—' }}</td>
+          <td>{{ r.end_time | format_npt('%H:%M') if r.end_time else '—' }}</td>
           <td>{{ r.hours }}</td>
           <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
         </tr>

@@ -222,6 +222,8 @@ def notify(to_user, event: str, **kwargs) -> bool:
         "welcome_staff": _welcome_staff,
         "bill_receipt": _bill_receipt,
         "order_received": _order_received,
+        "admin_new_order": _admin_new_order,
+        "admin_new_booking": _admin_new_booking,
     }
     fn = builders.get(event)
     if not fn:
@@ -557,3 +559,85 @@ def _order_received(name, **kw):
         closing="— Hotel Grand Garden, Urlabari",
     )
     return subject, html, f"Order {order_number} received. Total Rs. {total}."
+
+
+def get_admin_emails():
+    """Business + staff with admin role emails."""
+    emails = set()
+    try:
+        from app.models.settings import BusinessSettings
+        s = BusinessSettings.get_settings()
+        if s and getattr(s, "email", None):
+            emails.add(s.email.strip())
+        if s and getattr(s, "notification_email", None):
+            emails.add(s.notification_email.strip())
+    except Exception:
+        pass
+    try:
+        from app.models.user import User
+        for u in User.query.filter(User.is_active == True).all():
+            if getattr(u, "email", None) and (
+                getattr(u, "role_code", None) in ("super_admin", "admin")
+                or getattr(u, "is_admin", False)
+            ):
+                emails.add(u.email.strip())
+    except Exception:
+        pass
+    return [e for e in emails if e and "@" in e]
+
+
+def notify_admin(event: str, **kwargs) -> bool:
+    """Email all admin addresses for operational events."""
+    ok = False
+    for email in get_admin_emails():
+        class _A:
+            pass
+        a = _A()
+        a.email = email
+        a.full_name = "Admin"
+        try:
+            if notify(a, event, **kwargs):
+                ok = True
+        except Exception:
+            pass
+    return ok
+
+
+def _admin_new_order(name, **kw):
+    order_number = kw.get("order_number", "—")
+    total = kw.get("total", "—")
+    source = kw.get("source", "—")
+    guest = kw.get("guest", "—")
+    subject = f"[HMS] New order {order_number}"
+    body = f"<p>New order received.</p><p>Guest: <strong>{guest}</strong></p>"
+    details = [
+        ("Order", str(order_number)),
+        ("Source", str(source)),
+        ("Total", f"Rs. {total}"),
+        ("Guest", str(guest)),
+    ]
+    html = build_html(subject=subject, title="New Order", recipient_name=name or "Admin",
+                      body_html=body, details=details, highlight=str(order_number),
+                      closing="— Hotel Grand HMS")
+    return subject, html, f"New order {order_number}"
+
+
+def _admin_new_booking(name, **kw):
+    ref = kw.get("ref", "—")
+    guest = kw.get("guest", "—")
+    check_in = kw.get("check_in", "—")
+    check_out = kw.get("check_out", "—")
+    room = kw.get("room", "—")
+    subject = f"[HMS] New booking {ref}"
+    body = f"<p>New room booking.</p><p>Guest: <strong>{guest}</strong></p>"
+    details = [
+        ("Ref", str(ref)),
+        ("Guest", str(guest)),
+        ("Room", str(room)),
+        ("Check-in", str(check_in)),
+        ("Check-out", str(check_out)),
+    ]
+    html = build_html(subject=subject, title="New Booking", recipient_name=name or "Admin",
+                      body_html=body, details=details, highlight=str(ref),
+                      closing="— Hotel Grand HMS")
+    return subject, html, f"New booking {ref}"

@@ -122,6 +122,14 @@ def _place_order(token):
                 source=source,
                 items_html=items_html,
             )
+            from app.services.email_service import notify_admin
+            notify_admin(
+                "admin_new_order",
+                order_number=order.order_number,
+                total=str(order.total),
+                source=source,
+                guest=email or data.get("customer_name") or "Guest",
+            )
         except Exception:
             pass
         return jsonify({

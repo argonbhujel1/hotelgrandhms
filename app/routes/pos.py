@@ -193,6 +193,14 @@ def checkout():
                     source=source,
                     items_html="",
                 )
+                from app.services.email_service import notify_admin
+                notify_admin(
+                    "admin_new_order",
+                    order_number=order.order_number,
+                    total=str(order.total),
+                    source=source,
+                    guest=customer_email or data.get("customer_name") or "Guest",
+                )
             except Exception:
                 pass
         log_activity("pos_checkout", module="pos", record_id=order.id)

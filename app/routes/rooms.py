@@ -40,10 +40,11 @@ def add_room():
             number=number,
             room_type=request.form.get("room_type") or "Standard",
             price=Decimal(request.form.get("price") or "0"),
+            floor=(request.form.get("floor") or "").strip() or None,
             description=request.form.get("description"),
             amenities=request.form.get("amenities"),
             status=request.form.get("status") or "available",
-            show_on_website=False,  # only public-admin rooms appear on website
+            show_on_website=False,  # QR/ops only — never on public website
         )
         f = request.files.get("image")
         if f and f.filename:
@@ -77,6 +78,8 @@ def edit_room(room_id):
         room.description = request.form.get("description")
         room.amenities = request.form.get("amenities")
         room.status = request.form.get("status") or room.status
+        room.floor = (request.form.get("floor") or "").strip() or getattr(room, "floor", None)
+        room.show_on_website = False  # HMS rooms never on public site
         # Keep HMS rooms off public site unless explicitly enabled
         if "show_on_website" in request.form:
             room.show_on_website = request.form.get("show_on_website") in ("1", "on", "true", "True")

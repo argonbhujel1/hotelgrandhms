@@ -76,7 +76,7 @@
         <tr>
           <td><strong>{{ b.bill_number }}</strong></td>
           <td>{% if b.order %}{{ b.order.order_number }}{% endif %}{% if b.folio_id %} · FOL{% endif %}</td>
-          <td>{{ b.created_at.strftime('%d %b %Y %H:%M') if b.created_at else '' }}</td>
+          <td>{{ b.created_at | format_npt if b.created_at else '' }}</td>
           <td>{{ b.source_label }}</td>
           <td>Rs. {{ b.total }}</td>
           <td>{{ b.payment_method }}</td>

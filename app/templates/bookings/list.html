@@ -17,8 +17,8 @@
           <td><span class="badge">{% if b.source == 'website' %}Web{% else %}HMS{% endif %}</span>{% if b.booking_ref %}<br><small>{{ b.booking_ref }}</small>{% endif %}</td>
           <td>{{ b.guest_name }}<br><small>{{ b.phone or b.guest_phone or '' }}</small></td>
           <td>{{ b.room.number if b.room else '—' }}</td>
-          <td>{{ b.check_in.strftime('%d %b %Y %H:%M') if b.check_in else '' }}</td>
-          <td>{{ b.check_out.strftime('%d %b %Y %H:%M') if b.check_out else '' }}</td>
+          <td>{{ b.check_in | format_npt if b.check_in else '' }}</td>
+          <td>{{ b.check_out | format_npt if b.check_out else '' }}</td>
           <td>Rs. {{ b.advance_amount }}</td>
           <td><span class="badge badge-{{ b.status }}">{{ b.status }}</span></td>
           <td>
