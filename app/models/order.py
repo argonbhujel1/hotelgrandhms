@@ -11,6 +11,7 @@ class Order(db.Model):
     room_id = db.Column(db.Integer, db.ForeignKey("rooms.id"), index=True)
     table_id = db.Column(db.Integer, db.ForeignKey("restaurant_tables.id"), index=True)
     customer_name = db.Column(db.String(150))  # optional
+    customer_email = db.Column(db.String(200))  # optional — asked on table/QR orders
     special_instructions = db.Column(db.Text)
     status = db.Column(db.String(30), default="NEW", index=True)
     # NEW, ACCEPTED, PREPARING, READY, DELIVERED, COMPLETED, CANCELLED

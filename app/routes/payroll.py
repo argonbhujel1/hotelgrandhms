@@ -111,7 +111,21 @@ def finalize(rid):
                 staff_user,
                 "payroll_finalized",
                 month=f"{rec.month}/{rec.year}",
-                net_payable=str(rec.net_payable),
+                net_payable=str(rec.net_payable or 0),
+                basic=str(rec.basic or 0),
+                allowance=str(rec.allowance or 0),
+                ot_pay=str(rec.ot_pay or 0),
+                gross_earnings=str(rec.gross_earnings or 0),
+                total_deduction=str(rec.total_deduction or 0),
+                unpaid_leave_deduction=str(rec.unpaid_leave_deduction or 0),
+                late_deduction=str(rec.late_deduction or 0),
+                food_deduction=str(rec.food_deduction or 0),
+                fine_deduction=str(rec.fine_deduction or 0),
+                advance_deduction=str(rec.advance_deduction or 0),
+                other_deduction=str(rec.other_deduction or 0),
+                total_paid=str(rec.total_paid or 0),
+                remaining=str(rec.remaining or 0),
+                working_days=str(rec.working_days or 26),
             )
         flash("Payroll finalized.", "success")
     return redirect(url_for("payroll.view_record", rid=rid))

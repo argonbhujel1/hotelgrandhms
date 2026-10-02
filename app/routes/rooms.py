@@ -112,7 +112,8 @@ def delete_room(room_id):
 def qr_list():
     rooms = Room.query.filter_by(is_active=True).order_by(Room.number).all()
     tables = RestaurantTable.query.filter_by(is_active=True).order_by(RestaurantTable.number).all()
-    public_site_url = current_app.config.get("PUBLIC_SITE_URL", "https://hotelgrand.com.np").rstrip("/")
+    public_site_url = current_app.config.get("HMS_SITE_URL") or current_app.config.get("PUBLIC_SITE_URL", "https://hms.hotelgrand.com.np")
+    public_site_url = public_site_url.rstrip("/")
     return render_template("rooms/qr_list.html", rooms=rooms, tables=tables, public_site_url=public_site_url)
 
 
@@ -184,8 +185,9 @@ def qr_image(qr_id):
         from flask import abort
         abort(404)
     base = request.url_root.rstrip("/")
-    public = current_app.config.get("PUBLIC_SITE_URL", "https://hotelgrand.com.np").rstrip("/")
-    url = f"{public}/qr/{qr.token}"
+    public = (current_app.config.get("HMS_SITE_URL") or current_app.config.get("PUBLIC_SITE_URL") or "https://hms.hotelgrand.com.np").rstrip("/")
+    # QR opens HMS order page: https://hms.hotelgrand.com.np/qr/order/<token>
+    url = f"{public}/qr/order/{qr.token}"
     img = qrcode.make(url)
     buf = BytesIO()
     img.save(buf, format="PNG")

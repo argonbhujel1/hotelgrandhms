@@ -92,6 +92,7 @@ def create_app(config_name=None):
 
     # Exempt public QR order API from CSRF where needed (token-based)
     csrf.exempt(app.view_functions.get("qr_public.place_order"))
+    csrf.exempt(app.view_functions.get("qr_public.place_order_qr_path"))
 
     @app.before_request
     def validate_staff_session():

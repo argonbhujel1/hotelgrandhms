@@ -95,12 +95,20 @@
     btn.disabled = true;
     btn.textContent = "Placing...";
 
-    fetch("/order/" + token + "/place", {
+    const emailEl = document.getElementById("custEmail");
+    const emailVal = emailEl ? (emailEl.value || "").trim() : "";
+    // Prefer /qr/order path when page was opened that way
+    const placeUrl = window.location.pathname.indexOf("/qr/order") === 0
+      ? "/qr/order/" + token + "/place"
+      : "/order/" + token + "/place";
+
+    fetch(placeUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         items: itemsPayload,
         customer_name: document.getElementById("custName").value || null,
+        customer_email: emailVal || null,
         special_instructions: document.getElementById("specialNotes").value || null,
       }),
     })

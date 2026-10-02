@@ -282,20 +282,64 @@ def _salary_payment(name, **kw):
 
 
 def _payroll_finalized(name, **kw):
+    """Payslip-style payroll notification email."""
     month = kw.get("month", "—")
     net = kw.get("net_payable", "—")
-    subject = f"Payroll Finalized — {month}"
-    body = "<p>Your monthly payroll has been <strong>finalized</strong> by administration.</p>"
-    details = [("Salary Month", str(month)), ("Net Payable", f"Rs. {net}")]
+    basic = kw.get("basic", kw.get("basic_salary", "—"))
+    allowance = kw.get("allowance", "—")
+    ot_pay = kw.get("ot_pay", "—")
+    gross = kw.get("gross_earnings", "—")
+    total_deduction = kw.get("total_deduction", "—")
+    unpaid = kw.get("unpaid_leave_deduction", "—")
+    late = kw.get("late_deduction", "—")
+    food = kw.get("food_deduction", "—")
+    fine = kw.get("fine_deduction", "—")
+    advance = kw.get("advance_deduction", "—")
+    other = kw.get("other_deduction", "—")
+    total_paid = kw.get("total_paid", "—")
+    remaining = kw.get("remaining", "—")
+    working_days = kw.get("working_days", "—")
+    hotel = kw.get("hotel_name", "Hotel Grand Garden")
+
+    subject = f"Payslip — {month} | {hotel}"
+    body = f"""
+      <p>Dear <strong>{name}</strong>,</p>
+      <p>Your <strong>monthly payroll</strong> for <strong>{month}</strong> has been finalized.
+      Below is a summary of your payslip.</p>
+    """
+    details = [
+        ("Employee", str(name)),
+        ("Salary Month", str(month)),
+        ("Working Days", str(working_days)),
+        ("Basic Salary", f"Rs. {basic}"),
+        ("Allowance", f"Rs. {allowance}"),
+        ("OT Pay", f"Rs. {ot_pay}"),
+        ("Gross Earnings", f"Rs. {gross}"),
+        ("Unpaid Leave Deduction", f"Rs. {unpaid}"),
+        ("Late Deduction", f"Rs. {late}"),
+        ("Food Deduction", f"Rs. {food}"),
+        ("Fine Deduction", f"Rs. {fine}"),
+        ("Advance Deduction", f"Rs. {advance}"),
+        ("Other Deduction", f"Rs. {other}"),
+        ("Total Deductions", f"Rs. {total_deduction}"),
+        ("Net Payable", f"Rs. {net}"),
+        ("Already Paid", f"Rs. {total_paid}"),
+        ("Remaining", f"Rs. {remaining}"),
+    ]
     html = build_html(
         subject=subject,
-        title="Payroll Finalized",
+        title=f"Payslip — {month}",
         recipient_name=name,
         body_html=body,
         details=details,
         highlight=f"Net Payable: Rs. {net}",
+        closing="This is a system-generated payslip notification from Hotel Grand Garden HR. Please contact accounts if you have questions.",
     )
-    return subject, html, f"Payroll finalized {month}. Net Rs. {net}."
+    text = (
+        f"Payslip {month} for {name}. Basic Rs. {basic}, Gross Rs. {gross}, "
+        f"Deductions Rs. {total_deduction}, Net Payable Rs. {net}."
+    )
+    return subject, html, text
 
 
 def _leave_submitted(name, **kw):
