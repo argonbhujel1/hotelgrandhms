@@ -1,0 +1,88 @@
+from flask import Blueprint, render_template, request, jsonify
+from app import db
+from app.models.room import QRCode
+from app.models.menu import MenuCategory, MenuItem
+from app.models.settings import BusinessSettings
+from app.services.order_service import create_order
+from app.services.folio_service import get_or_open_folio
+from app import csrf
+
+qr_public_bp = Blueprint("qr_public", __name__)
+
+
+@qr_public_bp.route("/order/<token>")
+def order_page(token):
+    qr = QRCode.query.filter_by(token=token, is_active=True).first()
+    if not qr:
+        return render_template("qr/invalid.html"), 404
+
+    label = qr.label
+    categories = (
+        MenuCategory.query.filter_by(is_active=True)
+        .order_by(MenuCategory.sort_order)
+        .all()
+    )
+    items = (
+        MenuItem.query.filter_by(is_active=True, is_available=True, show_on_qr=True)
+        .order_by(MenuItem.sort_order, MenuItem.name)
+        .all()
+    )
+    settings = BusinessSettings.get_settings()
+    return render_template(
+        "qr/menu.html",
+        qr=qr,
+        label=label,
+        categories=categories,
+        items=items,
+        settings=settings,
+        token=token,
+    )
+
+
+@qr_public_bp.route("/order/<token>/place", methods=["POST"])
+def place_order(token):
+    qr = QRCode.query.filter_by(token=token, is_active=True).first()
+    if not qr:
+        return jsonify({"ok": False, "error": "Invalid or disabled QR code."}), 404
+
+    data = request.get_json(silent=True) or {}
+    items_raw = data.get("items") or []
+    if not items_raw:
+        return jsonify({"ok": False, "error": "Cart is empty."}), 400
+
+    items_data = []
+    for row in items_raw:
+        items_data.append({
+            "menu_item_id": int(row["id"]),
+            "quantity": int(row.get("qty", 1)),
+            "notes": row.get("notes"),
+        })
+
+    source = "ROOM" if qr.source_type == "room" else "TABLE"
+    try:
+        folio = get_or_open_folio(
+            source=source,
+            room_id=qr.room_id,
+            table_id=qr.table_id,
+            customer_name=data.get("customer_name"),
+        )
+        order = create_order(
+            source=source,
+            items_data=items_data,
+            room_id=qr.room_id,
+            table_id=qr.table_id,
+            customer_name=data.get("customer_name"),
+            special_instructions=data.get("special_instructions"),
+            folio_id=folio.id,
+        )
+        return jsonify({
+            "ok": True,
+            "order_number": order.order_number,
+            "total": str(order.total),
+            "message": f"Order {order.order_number} placed successfully!",
+        })
+    except ValueError as e:
+        return jsonify({"ok": False, "error": str(e)}), 400
+    except Exception:
+        db.session.rollback()
+        return jsonify({"ok": False, "error": "Something went wrong. Please try again or contact Hotel Grand Garden."}), 500

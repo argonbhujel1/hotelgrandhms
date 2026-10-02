@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Menu{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+  <h2>Menu Items</h2>
+  <div style="display:flex;gap:.5rem">
+    {% if current_user.has_permission('menu.categories') %}
+    <a href="{{ url_for('menu.categories') }}" class="btn btn-outline">Categories</a>
+    {% endif %}
+    {% if current_user.has_permission('menu.add') %}
+    <a href="{{ url_for('menu.add_item') }}" class="btn btn-primary">+ Add Item</a>
+    {% endif %}
+  </div>
+</div>
+<div class="panel">
+  <div class="panel-body table-wrap">
+    <table class="data">
+      <thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Available</th><th>Website</th><th>QR</th><th></th></tr></thead>
+      <tbody>
+      {% for i in items %}
+        <tr>
+          <td>{% if i.image_path %}<img src="{{ url_for('static', filename=i.image_path) }}" style="height:36px;width:36px;object-fit:cover;border-radius:6px;vertical-align:middle;margin-right:.4rem">{% endif %}<strong>{{ i.name }}</strong></td>
+          <td>{{ i.category.name if i.category else '—' }}</td>
+          <td>Rs. {{ i.price }}</td>
+          <td>{% if i.is_available %}Yes{% else %}No{% endif %}</td>
+          <td>{% if i.show_on_website %}Yes{% else %}No{% endif %}</td>
+          <td>{% if i.show_on_qr %}Yes{% else %}No{% endif %}</td>
+          <td>{% if current_user.has_permission('menu.edit') %}<a href="{{ url_for('menu.edit_item', item_id=i.id) }}" class="btn btn-outline btn-sm">Edit</a>{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7">No items. Add menu items to enable ordering.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

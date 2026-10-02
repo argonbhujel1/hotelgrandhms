@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+{% block title %}POS{% endblock %}
+{% block content %}
+<h2 style="margin-bottom:1rem">Point of Sale</h2>
+<p style="color:var(--muted);font-size:.9rem;margin-bottom:1rem">
+  Left: food &amp; drinks · Right: source (Counter / Room / Table) + cart · Works the same for all sources.
+</p>
+
+<div class="pos-layout">
+  <!-- LEFT: always visible menu -->
+  <div>
+    <input type="text" id="posSearch" placeholder="Search food / drinks..." style="width:100%;padding:.65rem .85rem;border:1px solid var(--border);border-radius:8px;margin-bottom:.75rem;font-size:1rem">
+    <div id="posCats" style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem">
+      <button type="button" class="btn btn-sm btn-dark cat-btn active" data-cat="all">All</button>
+      {% for c in categories %}
+      <button type="button" class="btn btn-sm btn-outline cat-btn" data-cat="{{ c.id }}">{{ c.name }}</button>
+      {% endfor %}
+    </div>
+    <div id="posItems" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:.6rem">
+      {% for i in items %}
+      <div class="pos-item" role="button" tabindex="0"
+           data-id="{{ i.id }}"
+           data-name="{{ i.name|e }}"
+           data-price="{{ '%.2f'|format(i.price|float) }}"
+           data-cat="{{ i.category_id or '' }}"
+           style="background:#fff;border:2px solid var(--border);border-radius:12px;padding:.75rem;text-align:left;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent">
+        {% if i.image_path %}
+        <img src="{{ url_for('static', filename=i.image_path) }}" alt="" draggable="false"
+             style="width:100%;height:64px;object-fit:cover;border-radius:8px;margin-bottom:.4rem;pointer-events:none">
+        {% else %}
+        <div style="height:40px;display:flex;align-items:center;justify-content:center;color:var(--gold);font-size:1.4rem;pointer-events:none">🍽</div>
+        {% endif %}
+        <div style="font-weight:700;font-size:.88rem;pointer-events:none">{{ i.name }}</div>
+        <div style="color:var(--gold);font-weight:700;margin-top:.2rem;pointer-events:none">Rs. {{ '%.2f'|format(i.price|float) }}</div>
+      </div>
+      {% else %}
+      <div style="grid-column:1/-1;padding:2rem;text-align:center;background:#fff;border-radius:12px;border:1px dashed var(--border)">
+        <p style="margin-bottom:.75rem">Menu खाली छ। पहिले Food / Drinks थप्नुहोस्।</p>
+        <a href="{{ url_for('menu.add_item') }}" class="btn btn-primary">+ Add Menu Item</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- RIGHT: cart -->
+  <div class="panel" style="position:sticky;top:70px;align-self:start">
+    <div class="panel-header">Cart</div>
+    <div class="panel-body">
+      <div class="form-group">
+        <label>Source</label>
+        <select id="posSource">
+          <option value="COUNTER">Counter (walk-in)</option>
+          <option value="ROOM">Room</option>
+          <option value="TABLE">Table</option>
+        </select>
+      </div>
+      <div class="form-group" id="roomSelect" style="display:none">
+        <label>Room</label>
+        <select id="posRoom">
+          {% for r in rooms %}<option value="{{ r.id }}">{{ r.number }} — {{ r.room_type }}</option>{% else %}<option value="">No rooms</option>{% endfor %}
+        </select>
+      </div>
+      <div class="form-group" id="tableSelect" style="display:none">
+        <label>Table</label>
+        <select id="posTable">
+          {% for t in tables %}<option value="{{ t.id }}">{{ t.number }}</option>{% else %}<option value="">No tables</option>{% endfor %}
+        </select>
+      </div>
+      <div id="folioBanner" style="display:none;background:#fff8e6;border:1px solid var(--gold);border-radius:8px;padding:.65rem;margin-bottom:.75rem;font-size:.85rem"></div>
+      <div class="form-group"><label>Customer (optional)</label><input id="posCustomer" placeholder="Name"></div>
+
+      <div style="font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.35rem">ITEMS IN CART</div>
+      <div id="cartLines" style="max-height:200px;overflow-y:auto;min-height:48px;margin-bottom:.5rem"></div>
+      <div style="font-size:1.15rem;font-weight:800;margin:.5rem 0">Total: Rs. <span id="posTotal">0.00</span></div>
+
+      <div class="form-group"><label>Discount</label><input id="posDiscount" type="number" step="0.01" value="0"></div>
+      <div class="form-group"><label>Payment</label>
+        <select id="posPay">
+          <option value="cash">Cash</option>
+          <option value="qr">QR</option>
+          <option value="card">Card</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Amount Received</label><input id="posReceived" type="number" step="0.01" value="0"></div>
+
+      <button type="button" class="btn btn-primary btn-block" id="btnSale" style="margin-bottom:.4rem;padding:.7rem;font-size:1rem">
+        Complete Sale &amp; Print
+      </button>
+      <button type="button" class="btn btn-dark btn-block" id="btnAddOpen" style="display:none;margin-bottom:.4rem">
+        Add to Open Bill (keep open)
+      </button>
+      <button type="button" class="btn btn-outline btn-block" id="btnCloseOnly" style="display:none">
+        Close Open Bill &amp; Print
+      </button>
+      <button type="button" class="btn btn-outline btn-block" id="btnClear" style="margin-top:.4rem">Clear Cart</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.pos-layout { display: grid; grid-template-columns: 1fr 320px; gap: 1rem; }
+@media (max-width: 900px) { .pos-layout { grid-template-columns: 1fr; } }
+.pos-item:hover, .pos-item:focus { border-color: #c9a227 !important; box-shadow: 0 2px 12px rgba(201,162,39,.25); outline: none; }
+.pos-item:active { transform: scale(0.98); }
+.cat-btn.active { background: #111 !important; color: #c9a227 !important; border-color: #111 !important; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  "use strict";
+
+  var cart = {};
+  var currentFolioId = null;
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || "";
+  var URL_CHECKOUT = {{ url_for('pos.checkout')|tojson }};
+  var URL_FOLIO = {{ url_for('pos.folio_info')|tojson }};
+  var URL_CLOSE = {{ url_for('pos.close_folio')|tojson }};
+
+  function $(id) { return document.getElementById(id); }
+
+  function renderCart() {
+    var el = $("cartLines");
+    var keys = Object.keys(cart);
+    var total = 0;
+    if (!keys.length) {
+      el.innerHTML = '<p style="color:#999;font-size:.85rem;padding:.5rem 0">Cart empty — click food/drinks on the left</p>';
+    } else {
+      var html = "";
+      keys.forEach(function (k) {
+        var c = cart[k];
+        total += c.qty * c.price;
+        html +=
+          '<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid #f0eee8;font-size:.9rem">' +
+          '<div style="flex:1;min-width:0"><strong>' + c.name + '</strong><br><small>Rs. ' + c.price.toFixed(2) + '</small></div>' +
+          '<div style="display:flex;align-items:center;gap:6px">' +
+          '<button type="button" class="qty-btn" data-id="' + c.id + '" data-d="-1" style="width:32px;height:32px;border:none;background:#eee;border-radius:8px;font-size:1.1rem;cursor:pointer">−</button>' +
+          '<span style="min-width:24px;text-align:center;font-weight:700">' + c.qty + '</span>' +
+          '<button type="button" class="qty-btn" data-id="' + c.id + '" data-d="1" style="width:32px;height:32px;border:none;background:#111;color:#c9a227;border-radius:8px;font-size:1.1rem;cursor:pointer">+</button>' +
+          '<span style="min-width:60px;text-align:right;font-weight:600">' + (c.qty * c.price).toFixed(2) + '</span>' +
+          '</div></div>';
+      });
+      el.innerHTML = html;
+    }
+    var disc = parseFloat($("posDiscount").value) || 0;
+    var net = Math.max(0, total - disc);
+    $("posTotal").textContent = net.toFixed(2);
+    $("posReceived").value = net.toFixed(2);
+  }
+
+  function addItem(id, name, price) {
+    id = String(id);
+    if (!cart[id]) {
+      cart[id] = { id: parseInt(id, 10), name: name, price: parseFloat(price) || 0, qty: 0 };
+    }
+    cart[id].qty += 1;
+    renderCart();
+  }
+
+  function changeQty(id, delta) {
+    id = String(id);
+    if (!cart[id]) return;
+    cart[id].qty += delta;
+    if (cart[id].qty <= 0) delete cart[id];
+    renderCart();
+  }
+
+  // Click food item (event delegation — works for Counter, Room, Table)
+  $("posItems").addEventListener("click", function (e) {
+    var card = e.target.closest(".pos-item");
+    if (!card) return;
+    e.preventDefault();
+    addItem(card.getAttribute("data-id"), card.getAttribute("data-name"), card.getAttribute("data-price"));
+  });
+
+  // Keyboard
+  $("posItems").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    var card = e.target.closest(".pos-item");
+    if (!card) return;
+    e.preventDefault();
+    addItem(card.getAttribute("data-id"), card.getAttribute("data-name"), card.getAttribute("data-price"));
+  });
+
+  // Qty +/- in cart
+  $("cartLines").addEventListener("click", function (e) {
+    var btn = e.target.closest(".qty-btn");
+    if (!btn) return;
+    changeQty(btn.getAttribute("data-id"), parseInt(btn.getAttribute("data-d"), 10));
+  });
+
+  // Category filter
+  $("posCats").addEventListener("click", function (e) {
+    var btn = e.target.closest(".cat-btn");
+    if (!btn) return;
+    document.querySelectorAll(".cat-btn").forEach(function (b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+    var cat = btn.getAttribute("data-cat");
+    document.querySelectorAll(".pos-item").forEach(function (el) {
+      el.style.display = (cat === "all" || el.getAttribute("data-cat") === cat) ? "" : "none";
+    });
+  });
+
+  // Search
+  $("posSearch").addEventListener("input", function () {
+    var q = (this.value || "").toLowerCase();
+    document.querySelectorAll(".pos-item").forEach(function (el) {
+      var name = (el.getAttribute("data-name") || "").toLowerCase();
+      el.style.display = !q || name.indexOf(q) >= 0 ? "" : "none";
+    });
+  });
+
+  $("posDiscount").addEventListener("change", renderCart);
+  $("posDiscount").addEventListener("input", renderCart);
+
+  function updateSourceUI() {
+    var s = $("posSource").value;
+    $("roomSelect").style.display = s === "ROOM" ? "block" : "none";
+    $("tableSelect").style.display = s === "TABLE" ? "block" : "none";
+    // Counter: only complete sale. Room/Table: also "keep open"
+    $("btnAddOpen").style.display = s === "COUNTER" ? "none" : "block";
+    if (s === "COUNTER") {
+      $("btnCloseOnly").style.display = "none";
+      $("folioBanner").style.display = "none";
+      currentFolioId = null;
+      $("btnSale").textContent = "Complete Sale & Print";
+    } else {
+      $("btnSale").textContent = "Add & Close Bill / Print";
+      loadFolio();
+    }
+  }
+
+  function loadFolio() {
+    var s = $("posSource").value;
+    if (s === "COUNTER") return;
+    var url = URL_FOLIO + "?source=" + encodeURIComponent(s);
+    if (s === "ROOM") url += "&room_id=" + ($("posRoom").value || "");
+    if (s === "TABLE") url += "&table_id=" + ($("posTable").value || "");
+    fetch(url)
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.open) {
+          currentFolioId = d.folio_id;
+          $("folioBanner").style.display = "block";
+          $("folioBanner").innerHTML =
+            "<strong>Open bill " + d.folio_number + "</strong><br>" +
+            "Food Rs. " + d.food_total + " · Charges Rs. " + d.charges_total +
+            " · <strong>Total Rs. " + d.grand_total + "</strong>";
+          $("btnCloseOnly").style.display = "block";
+          $("posReceived").value = d.grand_total;
+        } else {
+          currentFolioId = null;
+          $("folioBanner").style.display = "none";
+          $("btnCloseOnly").style.display = "none";
+        }
+      })
+      .catch(function () {});
+  }
+
+  $("posSource").addEventListener("change", updateSourceUI);
+  $("posRoom").addEventListener("change", loadFolio);
+  $("posTable").addEventListener("change", loadFolio);
+
+  function doCheckout(closeBill) {
+    var items = [];
+    Object.keys(cart).forEach(function (k) {
+      items.push({ id: cart[k].id, qty: cart[k].qty });
+    });
+    if (!items.length) {
+      alert("Please select food/drinks from the left first.");
+      return;
+    }
+    var s = $("posSource").value;
+    var body = {
+      source: s,
+      room_id: s === "ROOM" ? $("posRoom").value : null,
+      table_id: s === "TABLE" ? $("posTable").value : null,
+      customer_name: $("posCustomer").value || null,
+      discount: $("posDiscount").value || 0,
+      payment_method: $("posPay").value,
+      amount_received: $("posReceived").value,
+      close_bill: !!closeBill,
+      items: items
+    };
+    $("btnSale").disabled = true;
+    fetch(URL_CHECKOUT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
+      body: JSON.stringify(body)
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        $("btnSale").disabled = false;
+        if (!d.ok) {
+          alert(d.error || "Failed. Set PAN in Settings → Business if billing.");
+          return;
+        }
+        var msg = "Order " + d.order_number;
+        if (d.billed) msg += "\nBill " + d.bill_number + "\nRs. " + d.total;
+        else msg += "\nAdded to open bill\nFolio total Rs. " + d.folio_total;
+        alert(msg);
+        cart = {};
+        renderCart();
+        if (d.bill_id) window.open("/billing/" + d.bill_id + "/print", "_blank");
+        loadFolio();
+      })
+      .catch(function () {
+        $("btnSale").disabled = false;
+        alert("Network error");
+      });
+  }
+
+  $("btnSale").addEventListener("click", function () {
+    // Counter always closes; Room/Table this button closes too
+    doCheckout(true);
+  });
+  $("btnAddOpen").addEventListener("click", function () {
+    doCheckout(false);
+  });
+  $("btnCloseOnly").addEventListener("click", function () {
+    if (!currentFolioId) {
+      alert("No open bill");
+      return;
+    }
+    fetch(URL_CLOSE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
+      body: JSON.stringify({
+        folio_id: currentFolioId,
+        payment_method: $("posPay").value,
+        amount_received: $("posReceived").value,
+        discount: $("posDiscount").value || 0
+      })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d.ok) {
+          alert(d.error || "Failed");
+          return;
+        }
+        alert("Bill " + d.bill_number + " · Rs. " + d.total);
+        window.open("/billing/" + d.bill_id + "/print", "_blank");
+        loadFolio();
+      });
+  });
+  $("btnClear").addEventListener("click", function () {
+    cart = {};
+    renderCart();
+  });
+
+  renderCart();
+  updateSourceUI();
+})();
+</script>
+{% endblock %}

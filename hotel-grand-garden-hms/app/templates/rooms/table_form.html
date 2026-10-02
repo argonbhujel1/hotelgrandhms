@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Add Table{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:420px">
+  <div class="panel-header">Add Table</div>
+  <div class="panel-body">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group"><label>Table Number</label><input name="number" required></div>
+      <div class="form-group"><label>Seating Capacity</label><input name="seating_capacity" type="number" value="4"></div>
+      <div class="form-group"><label>Status</label>
+        <select name="status">
+          {% for s in ['available','occupied','reserved','cleaning','disabled'] %}
+          <option value="{{ s }}">{{ s|title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<h2 style="margin-bottom:1rem">Settings</h2>
+<div class="cards">
+  {% if current_user.has_permission('settings.business') %}
+  <a href="{{ url_for('settings.business') }}" class="card" style="text-decoration:none;color:inherit"><div class="label">Business</div><div class="value" style="font-size:1rem">Hotel, PAN, Address</div></a>
+  {% endif %}
+  {% if current_user.has_permission('settings.tax') %}
+  <a href="{{ url_for('settings.tax') }}" class="card" style="text-decoration:none;color:inherit"><div class="label">Tax / VAT</div><div class="value" style="font-size:1rem">13% Inclusive</div></a>
+  {% endif %}
+  {% if current_user.has_permission('settings.payment') %}
+  <a href="{{ url_for('settings.payment_methods') }}" class="card" style="text-decoration:none;color:inherit"><div class="label">Payment Methods</div><div class="value" style="font-size:1rem">Cash, QR, Card</div></a>
+  {% endif %}
+  {% if current_user.has_permission('settings.system') %}
+  <a href="{{ url_for('settings.working_hours') }}" class="card" style="text-decoration:none;color:inherit"><div class="label">Working Hours</div><div class="value" style="font-size:1rem">Attendance rules</div></a>
+  {% endif %}
+</div>
+{% endblock %}

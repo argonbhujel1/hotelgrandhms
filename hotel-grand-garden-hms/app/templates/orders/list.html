@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Orders{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+  <h2>QR & POS Orders</h2>
+  {% if current_user.has_permission('orders.accept') or current_user.role_code in ('super_admin','admin') %}
+  <a href="{{ url_for('orders.manual_add') }}" class="btn btn-primary">+ Manual Order</a>
+  {% endif %}
+</div>
+<div class="cards">
+  <div class="card"><div class="label">Today</div><div class="value">{{ cards.total }}</div></div>
+  <div class="card"><div class="label">New</div><div class="value">{{ cards.new }}</div></div>
+  <div class="card"><div class="label">Preparing</div><div class="value">{{ cards.preparing }}</div></div>
+  <div class="card"><div class="label">Ready</div><div class="value">{{ cards.ready }}</div></div>
+  <div class="card"><div class="label">Delivered</div><div class="value">{{ cards.delivered }}</div></div>
+  <div class="card"><div class="label">Completed</div><div class="value">{{ cards.completed }}</div></div>
+</div>
+<div class="panel">
+  <div class="panel-body table-wrap">
+    <table class="data">
+      <thead><tr><th>Order #</th><th>Time</th><th>Source</th><th>Customer</th><th>Total</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for o in orders %}
+        <tr>
+          <td><strong>{{ o.order_number }}</strong></td>
+          <td>{{ o.created_at.strftime('%d %b %H:%M') if o.created_at else '' }}</td>
+          <td>{{ o.source_label }}</td>
+          <td>{{ o.customer_name or '—' }}</td>
+          <td>Rs. {{ o.total }}</td>
+          <td><span class="badge badge-{{ o.status|lower }}">{{ o.status }}</span></td>
+          <td><a href="{{ url_for('orders.detail', oid=o.id) }}" class="btn btn-outline btn-sm">View</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7">No orders yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

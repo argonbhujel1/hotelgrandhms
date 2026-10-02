@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Business Settings{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:600px">
+  <div class="panel-header">Business Settings</div>
+  <div class="panel-body">
+    <form method="post" enctype="multipart/form-data">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group"><label>Hotel Name</label><input name="hotel_name" value="{{ s.hotel_name }}"></div>
+      <div class="form-group"><label>Business Name</label><input name="business_name" value="{{ s.business_name }}"></div>
+      <div class="form-group"><label>Address</label><input name="address" value="{{ s.address }}"></div>
+      <div class="form-group"><label>Phone</label><input name="phone" value="{{ s.phone }}"></div>
+      <div class="form-group"><label>Email</label><input name="email" value="{{ s.email or '' }}"></div>
+      <div class="form-group"><label>PAN (required for billing)</label><input name="pan" value="{{ s.pan or '' }}" placeholder="Enter PAN"></div>
+      <div class="form-group"><label>VAT Number (optional)</label><input name="vat_number" value="{{ s.vat_number or '' }}"></div>
+      <div class="form-group"><label>Currency</label><input name="currency" value="{{ s.currency }}"></div>
+      <div class="form-group"><label>Check-in Time</label><input name="check_in_time" value="{{ s.check_in_time }}"></div>
+      <div class="form-group"><label>Check-out Time</label><input name="check_out_time" value="{{ s.check_out_time }}"></div>
+      <div class="form-group"><label>Prepared By Text</label><textarea name="prepared_by_text" rows="3">{{ s.prepared_by_text }}</textarea></div>
+
+      <hr style="margin:1.25rem 0;border:none;border-top:1px solid var(--border)">
+      <h3 style="font-size:1rem;margin-bottom:.75rem">Branding</h3>
+
+      <div class="form-group">
+        <label>Hotel Logo (shown in sidebar, login, bills)</label>
+        <input type="file" name="logo" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml">
+        {% if s.logo_path %}
+        <div style="margin-top:.5rem;display:flex;align-items:center;gap:.75rem">
+          <img src="{{ url_for('static', filename=s.logo_path) }}" alt="Logo" style="max-height:56px;max-width:140px;object-fit:contain;border:1px solid var(--border);border-radius:8px;padding:4px;background:#fff">
+          <small style="color:var(--muted)">Current logo</small>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label>Favicon / Signature Mark (small icon, browser tab)</label>
+        <input type="file" name="favicon" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/x-icon,image/svg+xml">
+        {% if s.favicon_path %}
+        <div style="margin-top:.5rem;display:flex;align-items:center;gap:.75rem">
+          <img src="{{ url_for('static', filename=s.favicon_path) }}" alt="Favicon" style="height:32px;width:32px;object-fit:contain;border:1px solid var(--border);border-radius:6px;padding:2px;background:#fff">
+          <small style="color:var(--muted)">Current favicon</small>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label>Authorized Signature Image (optional, on bills)</label>
+        <input type="file" name="signature" accept="image/png,image/jpeg,image/jpg,image/webp">
+        {% if s.signature_path %}
+        <div style="margin-top:.5rem">
+          <img src="{{ url_for('static', filename=s.signature_path) }}" alt="Sign" style="max-height:48px;max-width:160px;object-fit:contain">
+        </div>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

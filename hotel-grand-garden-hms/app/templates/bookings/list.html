@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Bookings{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+  <h2>Bookings</h2>
+  {% if current_user.has_permission('bookings.create') %}
+  <a href="{{ url_for('bookings.add_booking') }}" class="btn btn-primary">+ New Booking</a>
+  {% endif %}
+</div>
+<div class="panel">
+  <div class="panel-body table-wrap">
+    <table class="data">
+      <thead><tr><th>Guest</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Advance</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for b in bookings %}
+        <tr>
+          <td>{{ b.guest_name }}<br><small>{{ b.phone or '' }}</small></td>
+          <td>{{ b.room.number if b.room else '—' }}</td>
+          <td>{{ b.check_in.strftime('%d %b %Y %H:%M') if b.check_in else '' }}</td>
+          <td>{{ b.check_out.strftime('%d %b %Y %H:%M') if b.check_out else '' }}</td>
+          <td>Rs. {{ b.advance_amount }}</td>
+          <td><span class="badge badge-{{ b.status }}">{{ b.status }}</span></td>
+          <td>
+            {% if current_user.has_permission('bookings.edit') %}
+            <form method="post" action="{{ url_for('bookings.update_status', bid=b.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="status" onchange="this.form.submit()" style="font-size:.8rem;padding:.25rem">
+                {% for s in ['pending','confirmed','checked_in','checked_out','cancelled'] %}
+                <option value="{{ s }}" {% if b.status==s %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7">No bookings.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

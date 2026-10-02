@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ bill.bill_number }}{% endblock %}
+{% block content %}
+<div style="display:flex;gap:.5rem;margin-bottom:1rem">
+  <a href="{{ url_for('billing.print_bill', bill_id=bill.id) }}" class="btn btn-primary" target="_blank">Print</a>
+  <a href="{{ url_for('billing.reprint_bill', bill_id=bill.id) }}" class="btn btn-outline" target="_blank">Reprint</a>
+</div>
+{% include "billing/_bill_body.html" %}
+{% endblock %}

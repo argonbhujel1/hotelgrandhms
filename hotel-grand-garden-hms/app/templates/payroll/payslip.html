@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Payslip{% endblock %}
+{% block content %}
+<div style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+  <a href="{{ url_for('payroll.print_payslip', rid=rec.id) }}" class="btn btn-primary" target="_blank">Print</a>
+  {% if current_user.has_permission('salary.edit') %}
+  <a href="{{ url_for('payroll.edit_record', rid=rec.id) }}" class="btn btn-outline">Edit Payroll</a>
+  {% endif %}
+  {% if rec.status == 'running' and current_user.has_permission('salary.create') %}
+  <form method="post" action="{{ url_for('payroll.finalize', rid=rec.id) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-dark">Finalize Month</button>
+  </form>
+  {% endif %}
+</div>
+<div class="panel" style="max-width:520px">
+  <div class="panel-header">Payslip — {{ rec.month }}/{{ rec.year }} ({{ rec.status|upper }})</div>
+  <div class="panel-body">
+    <p><strong>{{ user.full_name if user else '' }}</strong> · {{ user.employee_id if user else '' }}</p>
+    <p>{{ user.department if user else '' }} · {{ user.role.name if user and user.role else '' }}</p>
+    <hr style="margin:.75rem 0;border:none;border-top:1px solid var(--border)">
+    <p>Basic: Rs. {{ rec.basic }}</p>
+    <p>Allowance: Rs. {{ rec.allowance }}</p>
+    {% if rec.ot_pay and rec.ot_pay > 0 %}<p>OT Pay: Rs. {{ rec.ot_pay }} ({{ rec.ot_hours }} hrs)</p>{% endif %}
+    <p><strong>Gross Earnings: Rs. {{ rec.gross_earnings }}</strong></p>
+    <hr style="margin:.75rem 0;border:none;border-top:1px solid var(--border)">
+    <p>Unpaid Leave: Rs. {{ rec.unpaid_leave_deduction }}</p>
+    <p>Late: Rs. {{ rec.late_deduction }} · Early: Rs. {{ rec.early_deduction }}</p>
+    <p>Food: Rs. {{ rec.food_deduction }} · Fine: Rs. {{ rec.fine_deduction }}</p>
+    <p>Advance: Rs. {{ rec.advance_deduction }} · Other: Rs. {{ rec.other_deduction }}</p>
+    <p><strong>Total Deduction: Rs. {{ rec.total_deduction }}</strong></p>
+    <hr style="margin:.75rem 0;border:none;border-top:1px solid var(--border)">
+    <p style="font-size:1.2rem;font-weight:700">Net Payable: Rs. {{ rec.net_payable }}</p>
+    <p>Paid: Rs. {{ rec.total_paid }} · Remaining: Rs. {{ rec.remaining }}</p>
+    {% if current_user.has_permission('salary.payment') and rec.remaining and rec.remaining > 0 %}
+    <form method="post" action="{{ url_for('payroll.pay', rid=rec.id) }}" style="margin-top:1rem">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group"><label>Payment Amount</label><input name="amount" type="number" step="0.01" value="{{ rec.remaining }}"></div>
+      <div class="form-group"><label>Method</label>
+        <select name="method"><option value="cash">Cash</option><option value="bank">Bank</option><option value="qr">QR</option><option value="other">Other</option></select>
+      </div>
+      <button class="btn btn-primary">Record Payment</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

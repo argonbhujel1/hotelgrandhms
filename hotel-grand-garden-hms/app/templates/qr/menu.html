@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Grand Kitchen · {{ label }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/qr.css') }}">
+</head>
+<body data-token="{{ token }}">
+  <header class="qr-header">
+    <div class="hotel">{{ settings.hotel_name if settings else 'HOTEL GRAND GARDEN' }}</div>
+    <h1>GRAND KITCHEN</h1>
+    <span class="source">{{ label }}</span>
+  </header>
+  <div class="search-bar">
+    <input type="search" placeholder="Search menu..." oninput="searchMenu(this.value)">
+  </div>
+  <div class="cat-tabs">
+    <button type="button" class="active" onclick="filterCat('all', this)">All</button>
+    {% for c in categories %}
+    <button type="button" onclick="filterCat('{{ c.id }}', this)">{{ c.name }}</button>
+    {% endfor %}
+  </div>
+  <div class="menu-grid">
+    {% for i in items %}
+    <div class="menu-card" data-id="{{ i.id }}" data-name="{{ i.name }}" data-price="{{ i.price }}" data-cat="{{ i.category_id or '' }}">
+      {% if i.image_path %}
+      <div class="img" style="background:none;padding:0;overflow:hidden">
+        <img src="{{ url_for('static', filename=i.image_path) }}" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:12px">
+      </div>
+      {% else %}
+      <div class="img">🍽</div>
+      {% endif %}
+      <div class="info">
+        <div class="name">{{ i.name }}</div>
+        {% if i.description %}<div class="desc">{{ i.description }}</div>{% endif %}
+        <div class="price">Rs. {{ i.price }}</div>
+        <div class="qty-ctrl">
+          <button type="button" onclick="qtyChange('{{ i.id }}', -1)">−</button>
+          <span class="qty-val">0</span>
+          <button type="button" onclick="qtyChange('{{ i.id }}', 1)">+</button>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <p style="padding:2rem;text-align:center;color:#777">Menu is empty. Please contact staff.</p>
+    {% endfor %}
+  </div>
+  <div class="cart-bar" id="cartBar">
+    <div class="summary">🛒 <span id="cartQty">0</span> Items · Rs. <strong id="cartAmt">0</strong></div>
+    <button type="button" onclick="openCart()">VIEW CART</button>
+  </div>
+  <div class="sheet-overlay" id="sheetOverlay" onclick="closeCart()"></div>
+  <div class="bottom-sheet" id="bottomSheet">
+    <h3>Your Order</h3>
+    <div id="cartList"></div>
+    <div class="cart-total"><span>Total</span><span>Rs. <span id="sheetTotal">0</span></span></div>
+    <div class="sheet-form">
+      <input type="text" id="custName" placeholder="Your name (optional)">
+      <textarea id="specialNotes" rows="2" placeholder="Special instructions (optional)"></textarea>
+      <button type="button" class="place" id="placeBtn" onclick="placeOrder()">Place Order</button>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='js/qr-menu.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Tax Settings{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:420px">
+  <div class="panel-header">VAT Settings</div>
+  <div class="panel-body">
+    <p style="font-size:.85rem;color:var(--muted);margin-bottom:1rem">VAT is always enabled. Prices are VAT-inclusive.</p>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group"><label>VAT Rate (%)</label><input name="vat_rate" type="number" step="0.01" value="{{ s.vat_rate }}"></div>
+      <label style="display:flex;gap:.5rem;align-items:center;margin-bottom:1rem">
+        <input type="checkbox" name="vat_inclusive" value="1" {% if s.vat_inclusive %}checked{% endif %}> VAT Inclusive pricing
+      </label>
+      <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

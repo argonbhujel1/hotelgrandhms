@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QR Print — {{ label }}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; text-align: center; padding: 24px; color: #111; }
+    h1 { font-size: 18px; margin: 0 0 4px; letter-spacing: .08em; }
+    h2 { font-size: 28px; margin: 8px 0; color: #c9a227; }
+    .label { font-size: 22px; font-weight: 800; margin: 12px 0; }
+    img { width: 220px; height: 220px; }
+    .hint { margin-top: 12px; font-size: 13px; color: #666; }
+    @media print {
+      .no-print { display: none !important; }
+      body { padding: 8px; }
+    }
+  </style>
+</head>
+<body onload="window.print()">
+  <div class="no-print" style="margin-bottom:16px">
+    <button onclick="window.print()">Print</button>
+    <button onclick="window.close()">Close</button>
+  </div>
+  <h1>HOTEL GRAND GARDEN</h1>
+  <h2>GRAND KITCHEN</h2>
+  <div class="label">{{ label }}</div>
+  <img src="{{ url_for('rooms.qr_image', qr_id=qr.id) }}" alt="QR Code">
+  <div class="hint">Scan to order · Secure QR</div>
+</body>
+</html>

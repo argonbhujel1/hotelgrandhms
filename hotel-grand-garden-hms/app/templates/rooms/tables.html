@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Tables{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+  <h2>Restaurant Tables</h2>
+  {% if current_user.has_permission('rooms.add') %}
+  <a href="{{ url_for('rooms.add_table') }}" class="btn btn-primary">+ Add Table</a>
+  {% endif %}
+</div>
+<div class="panel">
+  <div class="panel-body table-wrap">
+    <table class="data">
+      <thead><tr><th>Number</th><th>Capacity</th><th>Status</th></tr></thead>
+      <tbody>
+      {% for t in tables %}
+        <tr>
+          <td><strong>{{ t.number }}</strong></td>
+          <td>{{ t.seating_capacity }}</td>
+          <td><span class="badge badge-{{ t.status }}">{{ t.status }}</span></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3">No tables yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

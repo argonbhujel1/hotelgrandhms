@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Live Sessions{% endblock %}
+{% block content %}
+<h2 style="margin-bottom:1rem">Live Staff Sessions</h2>
+<div class="panel">
+  <div class="panel-body table-wrap">
+    <table class="data">
+      <thead><tr><th>Staff</th><th>Role</th><th>Status</th><th>IP</th><th>Device</th><th>Login</th><th>Last Activity</th><th></th></tr></thead>
+      <tbody>
+      {% for s in sessions %}
+        <tr>
+          <td>{{ s.user.full_name if s.user else '—' }}</td>
+          <td>{{ s.user.role.name if s.user and s.user.role else '' }}</td>
+          <td><span class="badge badge-{{ s.status }}">{{ s.status }}</span></td>
+          <td>{{ s.ip_address or '—' }}</td>
+          <td style="font-size:.75rem;max-width:160px;overflow:hidden;text-overflow:ellipsis">{{ s.device_label or (s.user_agent[:40] if s.user_agent else '—') }}</td>
+          <td>{{ s.login_at.strftime('%H:%M') if s.login_at else '' }}</td>
+          <td>{{ s.last_activity.strftime('%H:%M') if s.last_activity else '' }}</td>
+          <td>
+            {% if current_user.has_permission('sessions.force_logout') %}
+            <form method="post" action="{{ url_for('staff.force_logout', sid=s.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="all_sessions" value="1">
+              <button class="btn btn-danger btn-sm" type="submit">Force Logout</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8">No active sessions.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

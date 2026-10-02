@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}{{ user.full_name }}{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1rem">
+  <div>
+    <h2>{{ user.full_name }}
+      {% if user.is_active %}<span class="badge badge-available">Active</span>
+      {% else %}<span class="badge badge-disabled">Inactive</span>{% endif %}
+    </h2>
+    <p style="color:var(--muted)">{{ user.role.name if user.role else '' }} · {{ user.employee_id or '' }} · {{ user.department or '' }}</p>
+  </div>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    {% if current_user.has_permission('staff.edit') %}
+    <a href="{{ url_for('staff.edit_staff', uid=user.id) }}" class="btn btn-primary">Edit / Change Role</a>
+    {% endif %}
+    {% if current_user.has_permission('staff.disable') and user.id != current_user.id %}
+      {% if user.is_active %}
+      <form method="post" action="{{ url_for('staff.deactivate_staff', uid=user.id) }}" onsubmit="return confirm('Deactivate this staff? They will not be able to login.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-outline">Deactivate</button>
+      </form>
+      {% else %}
+      <form method="post" action="{{ url_for('staff.activate_staff', uid=user.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-success">Activate</button>
+      </form>
+      <form method="post" action="{{ url_for('staff.delete_staff', uid=user.id) }}" onsubmit="return confirm('Delete this staff permanently (soft-delete)? Payroll history will be kept.');">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-danger">Delete</button>
+      </form>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel-body">
+    <p><strong>Email:</strong> {{ user.email }}</p>
+    <p><strong>Phone:</strong> {{ user.phone or '—' }}</p>
+    <p><strong>Username:</strong> {{ user.username }}</p>
+    <p><strong>Role:</strong> {{ user.role.name if user.role else '—' }}</p>
+    {% if user.salary_profile %}
+    <p><strong>Basic:</strong> Rs. {{ user.salary_profile.basic_salary }} · <strong>Allowance:</strong> Rs. {{ user.salary_profile.allowance }}</p>
+    {% endif %}
+
+    {% if current_user.has_permission('staff.role') %}
+    <form method="post" action="{{ url_for('staff.change_role', uid=user.id) }}" style="margin-top:1rem;display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group" style="margin:0">
+        <label>Change Role</label>
+        <select name="role_id">
+          {% for r in roles %}
+          <option value="{{ r.id }}" {% if user.role_id == r.id %}selected{% endif %}>{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-dark btn-sm">Update Role</button>
+    </form>
+    {% endif %}
+
+    <div style="margin-top:1.25rem;display:flex;gap:.5rem;flex-wrap:wrap">
+      {% if current_user.has_permission('staff.permissions') %}
+      <a href="{{ url_for('staff.permissions', uid=user.id) }}" class="btn btn-outline">Permissions</a>
+      {% endif %}
+      {% if current_user.has_permission('staff.reset_pw') %}
+      <a href="{{ url_for('staff.reset_password', uid=user.id) }}" class="btn btn-outline">Reset Password</a>
+      {% endif %}
+      {% if current_user.has_permission('salary.increment') %}
+      <a href="{{ url_for('payroll.salary_increment', uid=user.id) }}" class="btn btn-outline">Salary Increment</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

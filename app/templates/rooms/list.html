@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Rooms{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+  <h2>Rooms</h2>
+  {% if current_user.has_permission('rooms.add') %}
+  <a href="{{ url_for('rooms.add_room') }}" class="btn btn-primary">+ Add Room</a>
+  {% endif %}
+</div>
+<form method="get" style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search..." style="padding:.45rem .7rem;border:1px solid var(--border);border-radius:6px">
+  <select name="status" style="padding:.45rem;border:1px solid var(--border);border-radius:6px">
+    <option value="">All status</option>
+    {% for s in ['available','occupied','reserved','maintenance','disabled'] %}
+    <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s|title }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-outline btn-sm" type="submit">Filter</button>
+</form>
+<div class="panel">
+  <div class="panel-body table-wrap">
+    <table class="data">
+      <thead><tr><th>Number</th><th>Type</th><th>Price</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      {% for r in rooms %}
+        <tr>
+          <td><strong>{{ r.number }}</strong></td>
+          <td>{{ r.room_type }}</td>
+          <td>Rs. {{ r.price }}</td>
+          <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+          <td>
+            {% if current_user.has_permission('rooms.edit') %}
+            <a href="{{ url_for('rooms.edit_room', room_id=r.id) }}" class="btn btn-outline btn-sm">Edit</a>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5">No rooms yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
