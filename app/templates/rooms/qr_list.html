@@ -5,9 +5,21 @@
 <p style="color:var(--muted);margin-bottom:1rem;font-size:.9rem">
   Scan URL uses secure non-sequential tokens. Print or download QR for each room/table.
 </p>
-<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.25rem">
-  <a href="{{ url_for('rooms.qr_bulk_print_rooms') }}" class="btn btn-primary" target="_blank">Print all Room QR</a>
-  <a href="{{ url_for('rooms.qr_bulk_print_tables') }}" class="btn btn-primary" target="_blank">Print all Table QR</a>
+<div style="display:flex;flex-wrap:wrap;gap:.5rem;margin-bottom:1.25rem;align-items:center">
+  <form method="post" action="{{ url_for('rooms.generate_all_qr') }}" style="display:inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-primary">Generate QR of all</button>
+  </form>
+  <form method="post" action="{{ url_for('rooms.generate_all_room_qr') }}" style="display:inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-outline">Generate all Room QR</button>
+  </form>
+  <form method="post" action="{{ url_for('rooms.generate_all_table_qr') }}" style="display:inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-outline">Generate all Table QR</button>
+  </form>
+  <a href="{{ url_for('rooms.qr_bulk_print_rooms') }}" class="btn btn-outline" target="_blank">Print all Room QR</a>
+  <a href="{{ url_for('rooms.qr_bulk_print_tables') }}" class="btn btn-outline" target="_blank">Print all Table QR</a>
 </div>
 
 <div class="panel">

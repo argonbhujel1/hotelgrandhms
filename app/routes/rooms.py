@@ -306,3 +306,65 @@ def qr_bulk_print_tables():
         title="Table QR Codes",
         public_base=public,
     )
+
+
+
+@rooms_bp.route("/qr/generate-all", methods=["POST"])
+@login_required
+@permission_required("rooms.qr")
+def generate_all_qr():
+    """Create active QR for every room and table that has none."""
+    created = 0
+    rooms = Room.query.filter_by(is_active=True).all()
+    for room in rooms:
+        active = QRCode.query.filter_by(room_id=room.id, is_active=True, source_type="room").first()
+        if not active:
+            db.session.add(QRCode(
+                token=QRCode.generate_token(),
+                source_type="room",
+                room_id=room.id,
+                is_active=True,
+            ))
+            created += 1
+    tables = RestaurantTable.query.filter_by(is_active=True).all()
+    for table in tables:
+        active = QRCode.query.filter_by(table_id=table.id, is_active=True, source_type="table").first()
+        if not active:
+            db.session.add(QRCode(
+                token=QRCode.generate_token(),
+                source_type="table",
+                table_id=table.id,
+                is_active=True,
+            ))
+            created += 1
+    db.session.commit()
+    flash(f"Generated {created} new QR code(s).", "success")
+    return redirect(url_for("rooms.qr_list"))
+
+
+@rooms_bp.route("/qr/generate-all-rooms", methods=["POST"])
+@login_required
+@permission_required("rooms.qr")
+def generate_all_room_qr():
+    created = 0
+    for room in Room.query.filter_by(is_active=True).all():
+        if not QRCode.query.filter_by(room_id=room.id, is_active=True, source_type="room").first():
+            db.session.add(QRCode(token=QRCode.generate_token(), source_type="room", room_id=room.id, is_active=True))
+            created += 1
+    db.session.commit()
+    flash(f"Generated {created} room QR code(s).", "success")
+    return redirect(url_for("rooms.qr_list"))
+
+
+@rooms_bp.route("/qr/generate-all-tables", methods=["POST"])
+@login_required
+@permission_required("rooms.qr")
+def generate_all_table_qr():
+    created = 0
+    for table in RestaurantTable.query.filter_by(is_active=True).all():
+        if not QRCode.query.filter_by(table_id=table.id, is_active=True, source_type="table").first():
+            db.session.add(QRCode(token=QRCode.generate_token(), source_type="table", table_id=table.id, is_active=True))
+            created += 1
+    db.session.commit()
+    flash(f"Generated {created} table QR code(s).", "success")
+    return redirect(url_for("rooms.qr_list"))

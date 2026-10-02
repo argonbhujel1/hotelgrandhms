@@ -176,15 +176,34 @@ def create_app(config_name=None):
         }
 
     with app.app_context():
-        db.create_all()
-
+        try:
+            db.create_all()
+        except Exception as e:
+            app.logger.warning("create_all skipped: %s", e)
         try:
             _ensure_hms_schema()
         except Exception:
             pass
+        try:
+            _ensure_schema_patches()
+        except Exception:
+            pass
+        try:
+            _seed_if_empty()
+        except Exception as e:
+            app.logger.warning("seed skipped: %s", e)
+        try:
+            db.session.remove()
+            db.engine.dispose()
+        except Exception:
+            pass
 
-        _ensure_schema_patches()
-        _seed_if_empty()
+    @app.teardown_appcontext
+    def _shutdown_session(exception=None):
+        try:
+            db.session.remove()
+        except Exception:
+            pass
 
     return app
 

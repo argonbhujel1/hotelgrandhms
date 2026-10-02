@@ -7,7 +7,23 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "dev-secret-key-change-in-production-hg-garden-2026"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
+
+    # Serverless (Vercel): NullPool — never hold connections (Layerbase max_client_conn)
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        from sqlalchemy.pool import NullPool
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "poolclass": NullPool,
+            "pool_pre_ping": True,
+            "connect_args": {"connect_timeout": 10},
+        }
+    else:
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            "pool_pre_ping": True,
+            "pool_recycle": 280,
+            "pool_size": 2,
+            "max_overflow": 0,
+            "connect_args": {"connect_timeout": 10},
+        }
 
     # Database: PostgreSQL (Aiven/Neon) if DATABASE_URL set, else SQLite (local zero-config)
     _db_url = os.environ.get("DATABASE_URL", "").strip()
