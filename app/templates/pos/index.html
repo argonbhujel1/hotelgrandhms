@@ -67,7 +67,8 @@
         </select>
       </div>
       <div id="folioBanner" style="display:none;background:#fff8e6;border:1px solid var(--gold);border-radius:8px;padding:.65rem;margin-bottom:.75rem;font-size:.85rem"></div>
-      <div class="form-group"><label>Customer (optional)</label><input id="posCustomer" placeholder="Name"></div>
+      <div class="form-group"><label>Customer name</label><input id="posCustomer" placeholder="Name"></div>
+      <div class="form-group"><label>Customer email (required)</label><input id="posEmail" type="email" placeholder="guest@email.com" required></div>
 
       <div style="font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.35rem">ITEMS IN CART</div>
       <div id="cartLines" style="max-height:200px;overflow-y:auto;min-height:48px;margin-bottom:.5rem"></div>
@@ -91,7 +92,7 @@
         Add to Open Bill (keep open)
       </button>
       <button type="button" class="btn btn-outline btn-block" id="btnCloseOnly" style="display:none">
-        Close Open Bill &amp; Print
+        Complete sales &amp; send to billing
       </button>
       <button type="button" class="btn btn-outline btn-block" id="btnClear" style="margin-top:.4rem">Clear Cart</button>
     </div>
@@ -272,12 +273,19 @@
       alert("Please select food/drinks from the left first.");
       return;
     }
+    var emailVal = ($("posEmail") && $("posEmail").value || "").trim();
+    if (!emailVal) {
+      alert("Customer email is required (bill will be emailed).");
+      if ($("posEmail")) $("posEmail").focus();
+      return;
+    }
     var s = $("posSource").value;
     var body = {
       source: s,
       room_id: s === "ROOM" ? $("posRoom").value : null,
       table_id: s === "TABLE" ? $("posTable").value : null,
       customer_name: $("posCustomer").value || null,
+      customer_email: $("posEmail").value || null,
       discount: $("posDiscount").value || 0,
       payment_method: $("posPay").value,
       amount_received: $("posReceived").value,
@@ -298,12 +306,12 @@
           return;
         }
         var msg = "Order " + d.order_number;
-        if (d.billed) msg += "\nBill " + d.bill_number + "\nRs. " + d.total;
+        if (d.billed) msg += "\nBill " + d.bill_number + "\nRs. " + d.total + "\nBill emailed to customer.";
         else msg += "\nAdded to open bill\nFolio total Rs. " + d.folio_total;
         alert(msg);
         cart = {};
         renderCart();
-        if (d.bill_id) window.open("/billing/" + d.bill_id + "/print", "_blank");
+        // Complete sales & send to billing emails the bill (no auto print)
         loadFolio();
       })
       .catch(function () {
@@ -324,6 +332,12 @@
       alert("No open bill");
       return;
     }
+    var emailVal = ($("posEmail") && $("posEmail").value || "").trim();
+    if (!emailVal) {
+      alert("Customer email is required (bill will be emailed).");
+      if ($("posEmail")) $("posEmail").focus();
+      return;
+    }
     fetch(URL_CLOSE, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRFToken": CSRF },
@@ -331,7 +345,8 @@
         folio_id: currentFolioId,
         payment_method: $("posPay").value,
         amount_received: $("posReceived").value,
-        discount: $("posDiscount").value || 0
+        discount: $("posDiscount").value || 0,
+        customer_email: emailVal
       })
     })
       .then(function (r) { return r.json(); })
@@ -340,8 +355,7 @@
           alert(d.error || "Failed");
           return;
         }
-        alert("Bill " + d.bill_number + " · Rs. " + d.total);
-        window.open("/billing/" + d.bill_id + "/print", "_blank");
+        alert("Bill " + d.bill_number + " · Rs. " + d.total + "\nBill emailed to customer.");
         loadFolio();
       });
   });

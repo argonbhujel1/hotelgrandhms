@@ -21,7 +21,7 @@
   </div>
   {% if reprint %}<div class="center bold">*** REPRINT ***</div>{% endif %}
   {% if hotel_settings and hotel_settings.logo_path %}
-  <div class="center"><img src="{{ url_for('static', filename=hotel_settings.logo_path) }}" style="max-height:48px;max-width:120px;object-fit:contain"></div>
+  <div class="center"><img src="{% if hotel_settings.logo_path.startswith('http') %}{{ hotel_settings.logo_path }}{% else %}{{ url_for('static', filename=hotel_settings.logo_path) }}{% endif %}" style="max-height:48px;max-width:120px;object-fit:contain"></div>
   {% endif %}
   <div class="center bold" style="font-size:15px">{{ bill.hotel_name }}</div>
   <div class="center">{{ bill.business_name }}</div>
@@ -66,9 +66,9 @@
   <hr>
   <div class="center" style="margin-top:12px">
     {% if hotel_settings and hotel_settings.signature_path %}
-    <img src="{{ url_for('static', filename=hotel_settings.signature_path) }}" style="max-height:40px;max-width:100px">
+    <img src="{% if hotel_settings.signature_path.startswith('http') %}{{ hotel_settings.signature_path }}{% else %}{{ url_for('static', filename=hotel_settings.signature_path) }}{% endif %}" style="max-height:40px;max-width:100px">
     {% elif hotel_settings and hotel_settings.favicon_path %}
-    <img src="{{ url_for('static', filename=hotel_settings.favicon_path) }}" style="height:32px;width:32px;object-fit:contain">
+    <img src="{% if hotel_settings.favicon_path.startswith('http') %}{{ hotel_settings.favicon_path }}{% else %}{{ url_for('static', filename=hotel_settings.favicon_path) }}{% endif %}" style="height:32px;width:32px;object-fit:contain">
     {% else %}
     <div style="display:inline-block;width:32px;height:32px;background:#c9a227;border-radius:6px;line-height:32px;font-weight:800">HG</div>
     {% endif %}

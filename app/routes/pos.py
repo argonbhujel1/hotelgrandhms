@@ -119,6 +119,9 @@ def checkout():
     close_bill = bool(data.get("close_bill"))
     payment_method = data.get("payment_method") or "cash"
     amount_received = data.get("amount_received")
+    customer_email = (data.get("customer_email") or data.get("email") or "").strip()
+    if not customer_email:
+        return jsonify({"ok": False, "error": "Customer email is required."}), 400
 
     try:
         folio = get_or_open_folio(
@@ -134,6 +137,7 @@ def checkout():
             room_id=room_id,
             table_id=table_id,
             customer_name=data.get("customer_name"),
+            customer_email=customer_email,
             special_instructions=data.get("notes"),
             discount=Decimal(str(data.get("discount") or 0)),
             created_by_id=current_user.id,
@@ -163,6 +167,7 @@ def checkout():
             )
             bill_id = bill.id
             bill_number = bill.bill_number
+            _email_bill(bill, customer_email)
 
         log_activity("pos_checkout", module="pos", record_id=order.id)
         return jsonify({
@@ -193,6 +198,15 @@ def close_folio():
     if not folio or folio.status != "open":
         return jsonify({"ok": False, "error": "Open folio not found"}), 404
     try:
+        email = (data.get("customer_email") or data.get("email") or "").strip()
+        if not email:
+            # try from latest order on folio
+            for o in reversed(list(folio.orders or [])):
+                if getattr(o, "customer_email", None):
+                    email = o.customer_email
+                    break
+        if not email:
+            return jsonify({"ok": False, "error": "Customer email is required to send bill."}), 400
         bill = close_folio_and_bill(
             folio,
             payment_method=data.get("payment_method") or "cash",
@@ -200,7 +214,8 @@ def close_folio():
             user=current_user,
             discount=Decimal(str(data.get("discount") or 0)),
         )
+        _email_bill(bill, email)
         log_activity("close_folio", module="pos", record_id=folio.id)
-        return jsonify({"ok": True, "bill_id": bill.id, "bill_number": bill.bill_number, "total": str(bill.total)})
+        return jsonify({"ok": True, "bill_id": bill.id, "bill_number": bill.bill_number, "total": str(bill.total), "emailed": True})
     except ValueError as e:
         return jsonify({"ok": False, "error": str(e)}), 400

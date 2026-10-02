@@ -208,6 +208,7 @@ def notify(to_user, event: str, **kwargs) -> bool:
         "consumption_rejected": _consumption_decision,
         "password_reset": _password_reset,
         "welcome_staff": _welcome_staff,
+        "bill_receipt": _bill_receipt,
     }
     fn = builders.get(event)
     if not fn:
@@ -436,17 +437,82 @@ def _consumption_decision(name, **kw):
 
 
 def _password_reset(name, **kw):
+    username = kw.get("username", "—")
+    password = kw.get("password", "—")
+    login_url = kw.get("login_url", "https://hms.hotelgrand.com.np/login")
     subject = "Password Reset — Hotel Grand Garden HMS"
-    body = "<p>Your HMS password has been reset by an administrator. Please login with the new password and change it after signing in.</p>"
-    html = build_html(subject=subject, title="Password Reset", recipient_name=name, body_html=body, closing="For security, do not share your password.")
-    return subject, html, "Your password was reset."
+    body = f"""
+      <p>Your HMS password has been <strong>reset</strong> by an administrator.</p>
+      <p>Please sign in with the new credentials below and change your password after login.</p>
+    """
+    details = [
+        ("Username", str(username)),
+        ("New Password", str(password)),
+        ("Login URL", str(login_url)),
+    ]
+    html = build_html(
+        subject=subject,
+        title="Password Reset",
+        recipient_name=name,
+        body_html=body,
+        details=details,
+        highlight=f"Username: {username}",
+        closing="For security, do not share your password. Change it after first login.",
+    )
+    return subject, html, f"Password reset. Username {username}."
 
 
 def _welcome_staff(name, **kw):
-    subject = "Welcome to Hotel Grand Garden"
+    username = kw.get("username", "—")
+    password = kw.get("password", "—")
+    login_url = kw.get("login_url", "https://hms.hotelgrand.com.np/login")
+    subject = "Welcome to Hotel Grand Garden — HMS Login"
     body = f"""
-      <p>Welcome to the team! Your HMS account has been created.</p>
-      <p>Username: <strong>{kw.get('username', '—')}</strong></p>
+      <p>Welcome to the team! Your <strong>Hotel Grand Garden HMS</strong> account has been created.</p>
+      <p>Use the credentials below to sign in:</p>
     """
-    html = build_html(subject=subject, title="Welcome Aboard", recipient_name=name, body_html=body, highlight="We're glad to have you.")
-    return subject, html, f"Welcome {name}."
+    details = [
+        ("Username", str(username)),
+        ("Password", str(password)),
+        ("Login URL", str(login_url)),
+    ]
+    html = build_html(
+        subject=subject,
+        title="Welcome Aboard",
+        recipient_name=name,
+        body_html=body,
+        details=details,
+        highlight=f"Username: {username}",
+        closing="Please change your password after first login. Do not share these credentials.",
+    )
+    return subject, html, f"Welcome {name}. Username {username}."
+
+
+def _bill_receipt(name, **kw):
+    bill_number = kw.get("bill_number", "—")
+    total = kw.get("total", "—")
+    method = kw.get("payment_method", "—")
+    source = kw.get("source", "—")
+    items_html = kw.get("items_html", "")
+    subject = f"Bill {bill_number} — Hotel Grand Garden"
+    body = f"""
+      <p>Thank you for dining / staying with us.</p>
+      <p>Your bill <strong>{bill_number}</strong> has been completed.</p>
+      {items_html}
+    """
+    details = [
+        ("Bill No.", str(bill_number)),
+        ("Source", str(source)),
+        ("Payment", str(method)),
+        ("Total", f"Rs. {total}"),
+    ]
+    html = build_html(
+        subject=subject,
+        title=f"Bill {bill_number}",
+        recipient_name=name or "Guest",
+        body_html=body,
+        details=details,
+        highlight=f"Total: Rs. {total}",
+        closing="Thank you — Hotel Grand Garden, Urlabari.",
+    )
+    return subject, html, f"Bill {bill_number} total Rs. {total}."

@@ -53,6 +53,7 @@ def add_staff():
         if User.query.filter_by(username=username).first():
             flash("Username already taken.", "danger")
             return render_template("staff/form.html", user=None, roles=roles)
+        plain_password = (request.form.get("password") or "changeme123").strip()
         u = User(
             username=username,
             email=request.form.get("email"),
@@ -61,7 +62,7 @@ def add_staff():
             phone=request.form.get("phone"),
             department=request.form.get("department"),
             role_id=int(request.form.get("role_id")),
-            password_hash=generate_password_hash(request.form.get("password") or "changeme123"),
+            password_hash=generate_password_hash(plain_password),
             is_active=True,
             joining_date=date.today(),
         )
@@ -80,8 +81,14 @@ def add_staff():
         ))
         db.session.commit()
         log_activity("create_staff", module="staff", record_id=u.id)
-        notify(u, "welcome_staff", username=u.username)
-        flash("Staff created. Welcome email queued.", "success")
+        notify(
+            u,
+            "welcome_staff",
+            username=u.username,
+            password=plain_password,
+            login_url="https://hms.hotelgrand.com.np/login",
+        )
+        flash("Staff created. Login credentials emailed.", "success")
         return redirect(url_for("staff.list_staff"))
     return render_template("staff/form.html", user=None, roles=roles)
 
@@ -211,8 +218,14 @@ def reset_password(uid):
             )
             db.session.commit()
             log_activity("reset_password", module="staff", record_id=user.id)
-            notify(user, "password_reset")
-            flash(f"Password reset for {user.full_name}. Email sent. All sessions logged out.", "success")
+            notify(
+                user,
+                "password_reset",
+                username=user.username,
+                password=new,
+                login_url="https://hms.hotelgrand.com.np/login",
+            )
+            flash(f"Password reset for {user.full_name}. New password emailed. All sessions logged out.", "success")
             return redirect(url_for("staff.profile", uid=uid))
     return render_template("staff/reset_password.html", user=user)
 

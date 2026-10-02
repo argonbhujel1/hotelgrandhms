@@ -75,8 +75,8 @@ def _place_order(token):
         return jsonify({"ok": False, "error": "Cart is empty."}), 400
 
     email = (data.get("customer_email") or data.get("email") or "").strip()
-    # Ask for email on table (and general) QR orders
-    if qr.source_type == "table" and not email:
+    # Email compulsory for room + table QR orders
+    if not email:
         return jsonify({"ok": False, "error": "Please enter your email address."}), 400
 
     items_data = []
