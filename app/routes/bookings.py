@@ -179,7 +179,19 @@ def update_status(bid):
             room_rate=room.price,
         )
     elif new_status == "checked_out" and room:
-        room.status = "available"
+        # Housekeeping: room becomes dirty after checkout
+        room.status = "dirty"
+        try:
+            from app.services.push_service import notify_roles
+            notify_roles(
+                ["staff", "admin", "super_admin", "reception"],
+                "🔔 Room needs cleaning",
+                f"Room {room.number} checked out — mark clean when done",
+                url=f"/rooms/?status=dirty",
+                tag=f"hk-dirty-{room.id}",
+            )
+        except Exception:
+            pass
         from app.models.folio import Folio
         from app.services.folio_service import close_folio_and_bill
         folio = Folio.query.filter_by(status="open", source="ROOM", room_id=room.id).first()

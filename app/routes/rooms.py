@@ -410,3 +410,45 @@ def bulk_add_tables():
         flash(f"Added {created} table(s) (capacity {capacity}). Skipped {skipped} existing.", "success")
         return redirect(url_for("rooms.list_tables"))
     return render_template("rooms/bulk_tables.html")
+
+
+@rooms_bp.route("/<int:rid>/mark-clean", methods=["POST"])
+@login_required
+@permission_required("rooms.status")
+def mark_clean(rid):
+    """Housekeeping: dirty/cleaning → available (clean)."""
+    room = db.session.get(Room, rid)
+    if not room:
+        flash("Room not found.", "danger")
+        return redirect(url_for("rooms.list_rooms"))
+    prev = room.status
+    room.status = "available"
+    db.session.commit()
+    log_activity("room_clean", module="rooms", record_id=room.id, details=f"{prev}->available")
+    try:
+        from app.services.push_service import notify_roles
+        notify_roles(
+            ["reception", "admin", "super_admin"],
+            "🔔 Room clean",
+            f"Room {room.number} is ready",
+            url="/rooms/",
+            tag=f"hk-clean-{room.id}",
+        )
+    except Exception:
+        pass
+    flash(f"Room {room.number} marked clean.", "success")
+    return redirect(request.referrer or url_for("rooms.list_rooms"))
+
+
+@rooms_bp.route("/<int:rid>/mark-cleaning", methods=["POST"])
+@login_required
+@permission_required("rooms.status")
+def mark_cleaning(rid):
+    room = db.session.get(Room, rid)
+    if not room:
+        flash("Room not found.", "danger")
+        return redirect(url_for("rooms.list_rooms"))
+    room.status = "cleaning"
+    db.session.commit()
+    flash(f"Room {room.number} — cleaning in progress.", "success")
+    return redirect(request.referrer or url_for("rooms.list_rooms"))

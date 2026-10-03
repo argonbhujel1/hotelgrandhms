@@ -17,7 +17,7 @@ class Room(db.Model):
     image_url = db.Column(db.String(500))
     show_on_website = db.Column(db.Boolean, default=False)  # HMS rooms stay internal unless public admin enables
     status = db.Column(db.String(20), default="available", index=True)
-    # available, occupied, reserved, maintenance, disabled
+    # available, occupied, reserved, dirty, cleaning, maintenance, disabled
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=npt_now_naive)
     updated_at = db.Column(db.DateTime, default=npt_now_naive, onupdate=npt_now_naive)
@@ -32,7 +32,7 @@ class RestaurantTable(db.Model):
     number = db.Column(db.String(20), unique=True, nullable=False, index=True)
     seating_capacity = db.Column(db.Integer, default=4)
     status = db.Column(db.String(20), default="available", index=True)
-    # available, occupied, reserved, cleaning, disabled
+    # available, occupied, reserved, dirty, cleaning, maintenance, disabled
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=npt_now_naive)
     updated_at = db.Column(db.DateTime, default=npt_now_naive, onupdate=npt_now_naive)

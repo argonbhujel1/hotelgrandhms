@@ -284,3 +284,82 @@ table.data tr:hover td { background: #fdfcf9; }
   .content { padding: 0 !important; }
   body { background: #fff; }
 }
+
+/* ── PWA / mobile bottom navigation ── */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 200;
+  height: 64px;
+  padding: 0 4px calc(env(safe-area-inset-bottom, 0px));
+  background: #111;
+  border-top: 1px solid #2a2a2a;
+  box-shadow: 0 -4px 20px rgba(0,0,0,.25);
+  align-items: stretch;
+  justify-content: space-around;
+}
+.bottom-nav .bn-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: #999;
+  font-size: .65rem;
+  text-decoration: none;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: .35rem .15rem;
+}
+.bottom-nav .bn-item .bn-ico { font-size: 1.15rem; line-height: 1; }
+.bottom-nav .bn-item .bn-lbl {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.bottom-nav .bn-item.active,
+.bottom-nav .bn-item:hover {
+  color: var(--gold-light, #e0bd55);
+}
+.bottom-nav .bn-fab {
+  position: relative;
+  top: -18px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #c9a227, #a8861a);
+  color: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(201,162,39,.45);
+  text-decoration: none;
+  flex: 0 0 56px;
+  border: 3px solid #111;
+}
+.bottom-nav .bn-fab .bn-fab-plus {
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.bottom-nav .bn-fab:hover { filter: brightness(1.08); color: #111; }
+
+@media (max-width: 900px) {
+  .bottom-nav { display: flex; }
+  .content { padding-bottom: 88px !important; }
+  body.pwa-standalone .bottom-nav { display: flex; }
+}
+@media (display-mode: standalone) {
+  .bottom-nav { display: flex; }
+  .content { padding-bottom: 88px !important; }
+}
+@media print {
+  .bottom-nav { display: none !important; }
+}
+
+.badge-dirty { background: #7c2d12; color: #fed7aa; }
+.badge-cleaning { background: #1e3a5f; color: #bfdbfe; }
