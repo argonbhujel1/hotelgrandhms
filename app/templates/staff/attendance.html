@@ -1,20 +1,26 @@
 {% extends "base.html" %}
 {% block title %}My Attendance{% endblock %}
 {% block content %}
-<h2 style="margin-bottom:1rem">My Attendance</h2>
-<div class="panel" style="max-width:400px;margin-bottom:1rem">
+<h2 style="margin-bottom:.35rem">My Attendance</h2>
+<p style="color:var(--muted);margin-bottom:1rem">
+  Nepal time (Kathmandu, UTC+5:45) · Today: <strong>{{ npt_today }}</strong>
+  · Now: <strong id="nptClock">{{ npt_now.strftime('%H:%M:%S') if npt_now else '' }}</strong>
+</p>
+<div class="panel" style="max-width:420px;margin-bottom:1rem">
   <div class="panel-body">
     {% if today_att and today_att.check_in %}
-      <p>Checked in: {{ today_att.check_in | format_npt('%H:%M') }}</p>
+      <p>Checked in: <strong>{{ today_att.check_in | format_npt('%H:%M') }}</strong> NPT</p>
       {% if today_att.check_out %}
-        <p>Checked out: {{ today_att.check_out | format_npt('%H:%M') }}</p>
+        <p>Checked out: <strong>{{ today_att.check_out | format_npt('%H:%M') }}</strong> NPT</p>
+        <p style="color:var(--muted)">Worked: {{ today_att.presence_minutes or 0 }} minutes</p>
       {% else %}
-        <form method="post">
+        <form method="post" style="margin-top:.75rem">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button name="action" value="check_out" class="btn btn-primary">Check Out</button>
         </form>
       {% endif %}
     {% else %}
+      <p style="margin-bottom:.75rem">You have not checked in today.</p>
       <form method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button name="action" value="check_in" class="btn btn-primary">Check In</button>
@@ -23,7 +29,7 @@
   </div>
 </div>
 <div class="panel">
-  <div class="panel-header">Recent</div>
+  <div class="panel-header">Recent (Nepal calendar)</div>
   <div class="panel-body table-wrap">
     <table class="data">
       <thead><tr><th>Date</th><th>In</th><th>Out</th><th>Minutes</th><th>Status</th></tr></thead>
@@ -36,9 +42,24 @@
           <td>{{ r.presence_minutes or 0 }}</td>
           <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
         </tr>
+      {% else %}
+        <tr><td colspan="5">No records yet.</td></tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+<script>
+(function(){
+  var el = document.getElementById('nptClock');
+  if (!el) return;
+  function tick() {
+    try {
+      el.textContent = new Date().toLocaleTimeString('en-NP', { timeZone: 'Asia/Kathmandu', hour12: false });
+    } catch (e) {}
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
+</script>
 {% endblock %}

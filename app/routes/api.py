@@ -4,6 +4,7 @@ from app.models.order import Order
 from app.models.user import StaffSession
 from app import db
 from datetime import datetime
+from app.utils.timeutil import npt_now_naive
 
 api_bp = Blueprint("api", __name__)
 
@@ -25,7 +26,7 @@ def heartbeat():
     if token:
         s = StaffSession.query.filter_by(session_token=token, user_id=current_user.id, is_active=True).first()
         if s:
-            s.last_activity = datetime.utcnow()
+            s.last_activity = npt_now_naive()
             s.status = "online"
             db.session.commit()
     return jsonify({"ok": True})

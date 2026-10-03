@@ -1,4 +1,44 @@
 
+
+def _ensure_roles_and_perms():
+    """Idempotent: add Housekeeping role + missing role permissions on existing DBs."""
+    from app.models.user import Role, Permission, RolePermission
+    # Create role if missing
+    hk = Role.query.filter_by(code="housekeeping").first()
+    if not hk:
+        hk = Role(code="housekeeping", name="Housekeeping")
+        db.session.add(hk)
+        db.session.flush()
+    # Ensure permission rows exist
+    needed_codes = [
+        "dashboard.view", "rooms.view", "rooms.status", "attendance.view", "leave.view",
+        "orders.view", "orders.accept", "menu.view", "kitchen.view",
+    ]
+    perms = {p.code: p for p in Permission.query.all()}
+    for code in needed_codes:
+        if code not in perms:
+            p = Permission(code=code, name=code.replace(".", " ").title(), module=code.split(".")[0])
+            db.session.add(p)
+            db.session.flush()
+            perms[code] = p
+    # Assign housekeeping defaults
+    hk_codes = ["dashboard.view", "rooms.view", "rooms.status", "attendance.view", "leave.view"]
+    for code in hk_codes:
+        p = perms.get(code)
+        if not p:
+            continue
+        exists = RolePermission.query.filter_by(role_id=hk.id, permission_id=p.id).first()
+        if not exists:
+            db.session.add(RolePermission(role_id=hk.id, permission_id=p.id))
+    # Waiter label
+    waiter = Role.query.filter_by(code="staff").first()
+    if waiter and waiter.name != "Waiter":
+        waiter.name = "Waiter"
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 def _ensure_menu_categories_hms():
     """Ensure fixed restaurant/bar categories exist (idempotent)."""
     from app.models.menu import MenuCategory
@@ -35,6 +75,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
+from app.utils.timeutil import npt_now_naive
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -220,7 +261,7 @@ def create_app(config_name=None):
             flash("Your session was ended by an administrator. Please login again.", "warning")
             return redirect(url_for("auth.login"))
         if s:
-            s.last_activity = datetime.utcnow()
+            s.last_activity = npt_now_naive()
             s.status = "online"
             try:
                 db.session.commit()
@@ -277,6 +318,10 @@ def create_app(config_name=None):
             _ensure_schema_patches()
             try:
                 _ensure_menu_categories_hms()
+            except Exception:
+                pass
+            try:
+                _ensure_roles_and_perms()
             except Exception:
                 pass
         except Exception:
@@ -376,6 +421,7 @@ def _seed_if_empty():
         ("reception", "Reception Staff"),
         ("cashier", "Cashier"),
         ("staff", "Waiter"),
+        ("housekeeping", "Housekeeping"),
     ]
     roles = {}
     for code, name in roles_data:
@@ -429,10 +475,16 @@ def _seed_if_empty():
         if code in perms:
             db.session.add(RolePermission(role_id=roles["cashier"].id, permission_id=perms[code].id))
 
-    # Waiter – self service
-    for code in ["dashboard.view", "attendance.view", "leave.view", "break.view", "overtime.view", "salary.view"]:
+    # Waiter – self service + basic orders
+    for code in ["dashboard.view", "attendance.view", "leave.view", "break.view", "overtime.view", "salary.view", "orders.view", "orders.accept", "menu.view", "rooms.view"]:
         if code in perms:
             db.session.add(RolePermission(role_id=roles["staff"].id, permission_id=perms[code].id))
+
+    # Housekeeping – rooms dirty/clean
+    if "housekeeping" in roles:
+        for code in ["dashboard.view", "rooms.view", "rooms.status", "attendance.view", "leave.view"]:
+            if code in perms:
+                db.session.add(RolePermission(role_id=roles["housekeeping"].id, permission_id=perms[code].id))
 
     # Default admin user
     admin = User(

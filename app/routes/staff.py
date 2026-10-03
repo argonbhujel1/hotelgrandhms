@@ -8,6 +8,7 @@ from app.utils.decorators import permission_required
 from app.utils.audit import log_activity, log_audit
 from app.services.email_service import notify
 from datetime import datetime, date
+from app.utils.timeutil import npt_now_naive, now_npt
 
 staff_bp = Blueprint("staff", __name__)
 
@@ -177,31 +178,38 @@ def force_logout(sid):
 @staff_bp.route("/attendance", methods=["GET", "POST"])
 @login_required
 def my_attendance():
+    """Check-in / check-out using Nepal (Kathmandu) calendar day & wall-clock time."""
+    today = now_npt().date()  # Nepal date, not server UTC
     if request.method == "POST":
         action = request.form.get("action")
-        today = date.today()
         att = Attendance.query.filter_by(user_id=current_user.id, date=today).first()
         if action == "check_in":
             if att and att.check_in:
-                flash("Already checked in today.", "warning")
+                flash("Already checked in today (Nepal time).", "warning")
             else:
                 if not att:
                     att = Attendance(user_id=current_user.id, date=today, status="pending")
                     db.session.add(att)
-                att.check_in = datetime.utcnow()
+                att.check_in = npt_now_naive()
                 db.session.commit()
-                flash("Checked in.", "success")
+                flash(f"Checked in at {att.check_in.strftime('%H:%M')} (Nepal time).", "success")
         elif action == "check_out" and att and att.check_in and not att.check_out:
-            att.check_out = datetime.utcnow()
+            att.check_out = npt_now_naive()
             delta = att.check_out - att.check_in
             att.presence_minutes = int(delta.total_seconds() // 60)
             att.worked_minutes = att.presence_minutes
             db.session.commit()
-            flash("Checked out.", "success")
+            flash(f"Checked out at {att.check_out.strftime('%H:%M')} (Nepal time).", "success")
         return redirect(url_for("staff.my_attendance"))
     records = Attendance.query.filter_by(user_id=current_user.id).order_by(Attendance.date.desc()).limit(30).all()
-    today_att = Attendance.query.filter_by(user_id=current_user.id, date=date.today()).first()
-    return render_template("staff/attendance.html", records=records, today_att=today_att)
+    today_att = Attendance.query.filter_by(user_id=current_user.id, date=today).first()
+    return render_template(
+        "staff/attendance.html",
+        records=records,
+        today_att=today_att,
+        npt_now=now_npt(),
+        npt_today=today,
+    )
 
 
 @staff_bp.route("/<int:uid>/reset-password", methods=["GET", "POST"])
@@ -439,7 +447,7 @@ def review_leave(lid):
         lr.status = status
         lr.reviewed_by_id = current_user.id
         from datetime import datetime
-        lr.reviewed_at = datetime.utcnow()
+        lr.reviewed_at = npt_now_naive()
         db.session.commit()
         staff = db.session.get(User, lr.user_id)
         notify(staff, f"leave_{status}", leave_date=str(lr.leave_date), status=status, note=request.form.get("note") or "")

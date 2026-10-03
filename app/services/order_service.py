@@ -1,5 +1,6 @@
 from decimal import Decimal
 from datetime import datetime
+from app.utils.timeutil import npt_now_naive
 from app import db
 from app.models.order import Order, OrderItem, OrderStatusHistory
 from app.models.menu import MenuItem
@@ -108,9 +109,9 @@ def change_order_status(order, new_status, user_id=None, note=None):
             raise ValueError(f"Invalid status transition {current} → {new_status}")
 
     order.status = new_status
-    order.updated_at = datetime.utcnow()
+    order.updated_at = npt_now_naive()
     if new_status == "COMPLETED":
-        order.completed_at = datetime.utcnow()
+        order.completed_at = npt_now_naive()
     db.session.add(
         OrderStatusHistory(
             order_id=order.id,

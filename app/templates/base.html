@@ -145,8 +145,8 @@
   <a href="{{ url_for('bookings.list_bookings') }}" class="bn-fab" title="Check-in / Out">
     <span class="bn-fab-plus">🔑</span>
   </a>
-  {% elif current_user.has_permission('rooms.view') %}
-  <a href="{{ url_for('rooms.list_rooms') }}?status=dirty" class="bn-fab" title="Housekeeping">
+  {% elif current_user.has_permission('rooms.status') or (current_user.role and current_user.role.code == 'housekeeping') %}
+  <a href="{{ url_for('rooms.list_rooms', status='dirty') }}" class="bn-fab" title="Housekeeping">
     <span class="bn-fab-plus">🧹</span>
   </a>
   {% else %}
