@@ -153,18 +153,25 @@ def bulk_add():
     """Add multiple menu items at once (no image). Image only on edit."""
     categories = MenuCategory.query.filter_by(is_active=True).order_by(MenuCategory.sort_order).all()
     if request.method == "POST":
-        cat_raw = request.form.get("category_id") or ""
-        category_id = int(cat_raw) if cat_raw.isdigit() else None
-        if not category_id:
-            flash("Select a category.", "danger")
-            return render_template("menu/bulk.html", categories=categories)
         names = request.form.getlist("names[]") or request.form.getlist("names")
         prices = request.form.getlist("prices[]") or request.form.getlist("prices")
         preps = request.form.getlist("prep_times[]") or request.form.getlist("prep_times")
+        cat_ids = request.form.getlist("category_ids[]") or request.form.getlist("category_ids")
+        fallback = request.form.get("category_id") or ""
+        fallback_id = int(fallback) if fallback.isdigit() else None
         added = 0
         for i, name in enumerate(names):
             name = (name or "").strip()
             if not name:
+                continue
+            cat_id = None
+            try:
+                if i < len(cat_ids) and str(cat_ids[i]).isdigit():
+                    cat_id = int(cat_ids[i])
+            except (TypeError, ValueError):
+                cat_id = None
+            cat_id = cat_id or fallback_id
+            if not cat_id:
                 continue
             price = _parse_price(prices[i] if i < len(prices) else 0)
             prep = None
@@ -175,7 +182,7 @@ def bulk_add():
                 prep = None
             db.session.add(MenuItem(
                 name=name,
-                category_id=category_id,
+                category_id=cat_id,
                 price=price,
                 prep_time_minutes=prep,
                 is_available=True,

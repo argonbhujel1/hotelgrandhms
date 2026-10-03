@@ -52,7 +52,7 @@ def create_app(config_name=None):
 
     from app.config import config_by_name
 
-    app = Flask(
+    flask_app = Flask(
         __name__,
         template_folder="templates",
         static_folder="static",
@@ -75,11 +75,11 @@ def create_app(config_name=None):
         except OSError:
             pass
 
-    db.init_app(app)
-    login_manager.init_app(app)
-    migrate.init_app(app, db)
+    db.init_app(flask_app)
+    login_manager.init_app(flask_app)
+    migrate.init_app(flask_app, db)
 
-    @app.context_processor
+    @flask_app.context_processor
     def _inject_push():
         try:
             from app.services.push_service import vapid_keys
@@ -88,7 +88,7 @@ def create_app(config_name=None):
             return {"vapid_public_key": ""}
 
 
-    csrf.init_app(app)
+    csrf.init_app(flask_app)
 
     login_manager.login_view = "auth.login"
     login_manager.login_message_category = "warning"
@@ -116,30 +116,32 @@ def create_app(config_name=None):
     from app.routes.qr_public import qr_public_bp
     from app.routes.api import api_bp
 
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(dashboard_bp)
-    app.register_blueprint(rooms_bp, url_prefix="/rooms")
-    app.register_blueprint(bookings_bp, url_prefix="/bookings")
-    app.register_blueprint(menu_bp, url_prefix="/menu")
-    app.register_blueprint(orders_bp, url_prefix="/orders")
-    app.register_blueprint(kitchen_bp, url_prefix="/kitchen")
+    flask_app.register_blueprint(auth_bp)
+    flask_app.register_blueprint(dashboard_bp)
+    flask_app.register_blueprint(rooms_bp, url_prefix="/rooms")
+    flask_app.register_blueprint(bookings_bp, url_prefix="/bookings")
+    flask_app.register_blueprint(menu_bp, url_prefix="/menu")
+    flask_app.register_blueprint(orders_bp, url_prefix="/orders")
+    flask_app.register_blueprint(kitchen_bp, url_prefix="/kitchen")
     # POS removed — use orders/manual + billing
-    # app.register_blueprint(pos_bp, url_prefix="/pos")
-    app.register_blueprint(billing_bp, url_prefix="/billing")
-    app.register_blueprint(staff_bp, url_prefix="/staff")
-    app.register_blueprint(payroll_bp, url_prefix="/payroll")
-    app.register_blueprint(settings_bp, url_prefix="/settings")
-    app.register_blueprint(qr_public_bp)  # /order/<token>
-    app.register_blueprint(api_bp, url_prefix="/api")
+    # flask_app.register_blueprint(pos_bp, url_prefix="/pos")
+    flask_app.register_blueprint(billing_bp, url_prefix="/billing")
+    flask_app.register_blueprint(staff_bp, url_prefix="/staff")
+    flask_app.register_blueprint(payroll_bp, url_prefix="/payroll")
+    flask_app.register_blueprint(settings_bp, url_prefix="/settings")
+    flask_app.register_blueprint(qr_public_bp)  # /order/<token>
+    flask_app.register_blueprint(api_bp, url_prefix="/api")
 
     # Exempt public QR order API from CSRF where needed (token-based)
-    csrf.exempt(app.view_functions.get("qr_public.place_order"))
-    csrf.exempt(app.view_functions.get("qr_public.place_order_qr_path"))
+    for _vf in ("qr_public.place_order", "qr_public.place_order_qr_path"):
+        fn = flask_app.view_functions.get(_vf)
+        if fn is not None:
+            csrf.exempt(fn)
     # csrf.exempt pos.checkout
     # csrf.exempt pos.close_folio
     # csrf.exempt pos.folio_info
 
-    @app.before_request
+    @flask_app.before_request
     def maintenance_gate():
         from flask import request as req, render_template_string, session
         ep = (req.endpoint or "")
@@ -176,7 +178,7 @@ def create_app(config_name=None):
         except Exception:
             pass
 
-    @app.before_request
+    @flask_app.before_request
     def validate_staff_session():
         """Force-logout works by deactivating StaffSession; reject if token inactive."""
         from flask import session, redirect, url_for, request as req, flash
@@ -225,20 +227,20 @@ def create_app(config_name=None):
             except Exception:
                 db.session.rollback()
 
-    @app.errorhandler(403)
+    @flask_app.errorhandler(403)
 
     def forbidden(e):
         return render_template("errors/403.html"), 403
 
-    @app.errorhandler(404)
+    @flask_app.errorhandler(404)
     def not_found(e):
         return render_template("errors/404.html"), 404
 
-    @app.errorhandler(500)
+    @flask_app.errorhandler(500)
     def server_error(e):
         return render_template("errors/500.html"), 500
 
-    @app.context_processor
+    @flask_app.context_processor
     def inject_globals():
         from app.models.settings import BusinessSettings
         from flask_login import current_user
@@ -249,7 +251,7 @@ def create_app(config_name=None):
         except Exception:
             pass
         from app.utils.timeutil import format_npt, now_npt
-        app.jinja_env.filters['format_npt'] = format_npt
+        flask_app.jinja_env.filters['format_npt'] = format_npt
         return {
             "hotel_settings": settings,
             "current_user": current_user,
@@ -257,7 +259,7 @@ def create_app(config_name=None):
             "now_npt": now_npt,
         }
 
-    with app.app_context():
+    with flask_app.app_context():
         try:
             import app.models  # noqa: F401 — register all models
             try:
@@ -266,7 +268,7 @@ def create_app(config_name=None):
                 pass
             db.create_all()
         except Exception as e:
-            app.logger.warning("create_all skipped: %s", e)
+            flask_app.logger.warning("create_all skipped: %s", e)
         try:
             _ensure_hms_schema()
         except Exception:
@@ -282,25 +284,25 @@ def create_app(config_name=None):
         try:
             _seed_if_empty()
         except Exception as e:
-            app.logger.warning("seed skipped: %s", e)
+            flask_app.logger.warning("seed skipped: %s", e)
         try:
             _ensure_tech_admin()
         except Exception as e:
-            app.logger.warning("tech admin: %s", e)
+            flask_app.logger.warning("tech admin: %s", e)
         try:
             db.session.remove()
             db.engine.dispose()
         except Exception:
             pass
 
-    @app.teardown_appcontext
+    @flask_app.teardown_appcontext
     def _shutdown_session(exception=None):
         try:
             db.session.remove()
         except Exception:
             pass
 
-    return app
+    return flask_app
 
 
 def _ensure_schema_patches():

@@ -2,35 +2,60 @@
 {% block title %}Bulk Add Menu{% endblock %}
 {% block content %}
 <h2 style="margin-bottom:1rem">Bulk Add Menu Items</h2>
-<div class="panel" style="max-width:720px">
+<div class="panel" style="max-width:900px">
   <div class="panel-body">
     <form method="post">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="form-group"><label>Category (Item class) *</label>
-        <select name="category_id" required>
-          {% for c in categories %}
-          <option value="{{ c.id }}">{{ c.sort_order }}. {{ c.name }}</option>
-          {% endfor %}
-        </select>
+      <div class="table-wrap" style="overflow-x:auto">
+        <table class="data" id="bulkRows" style="min-width:700px;width:100%">
+          <thead>
+            <tr>
+              <th>Item name *</th>
+              <th>Price (Rs.) *</th>
+              <th>Prep time (min)</th>
+              <th>Category *</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for _ in range(5) %}
+            <tr>
+              <td><input name="names[]" placeholder="Name" style="width:100%;padding:.4rem .5rem;border:1px solid var(--border);border-radius:6px"></td>
+              <td><input name="prices[]" type="number" step="0.01" min="0" style="width:100px;padding:.4rem .5rem;border:1px solid var(--border);border-radius:6px"></td>
+              <td><input name="prep_times[]" type="number" min="0" style="width:90px;padding:.4rem .5rem;border:1px solid var(--border);border-radius:6px" placeholder="15"></td>
+              <td>
+                <select name="category_ids[]" required style="width:100%;padding:.4rem .5rem;border:1px solid var(--border);border-radius:6px">
+                  {% for c in categories %}
+                  <option value="{{ c.id }}">{{ c.sort_order }}. {{ c.name }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td><button type="button" class="btn btn-outline btn-sm" onclick="this.closest('tr').remove()">×</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
-      <table class="data" id="bulkRows" style="margin:1rem 0">
-        <thead><tr><th>Item name *</th><th>Price *</th><th>Prep (min)</th><th></th></tr></thead>
-        <tbody>
-          {% for _ in range(5) %}
-          <tr>
-            <td><input name="names[]" placeholder="Name" style="width:100%"></td>
-            <td><input name="prices[]" type="number" step="0.01" min="0" style="width:100px"></td>
-            <td><input name="prep_times[]" type="number" min="0" style="width:90px" placeholder="15"></td>
-            <td><button type="button" class="btn btn-outline btn-sm" onclick="this.closest('tr').remove()">×</button></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      <button type="button" class="btn btn-outline" onclick="(function(){var t=document.querySelector('#bulkRows tbody');var r=document.createElement('tr');r.innerHTML='<td><input name=\'names[]\' placeholder=\'Name\' style=\'width:100%\'></td><td><input name=\'prices[]\' type=\'number\' step=\'0.01\' min=\'0\' style=\'width:100px\'></td><td><input name=\'prep_times[]\' type=\'number\' min=\'0\' style=\'width:90px\'></td><td><button type=\'button\' class=\'btn btn-outline btn-sm\' onclick=\'this.closest(\\\'tr\\\').remove()\'>×</button></td>';t.appendChild(r);})()">+ Row</button>
-      <button type="submit" class="btn btn-primary">Save all</button>
-      <a href="{{ url_for('menu.list_items') }}" class="btn btn-outline">Cancel</a>
+      <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap">
+        <button type="button" class="btn btn-outline" id="addRowBtn">+ Row</button>
+        <button type="submit" class="btn btn-primary">Save all</button>
+        <a href="{{ url_for('menu.list_items') }}" class="btn btn-outline">Cancel</a>
+      </div>
       <p style="color:var(--muted);font-size:.85rem;margin-top:.75rem">Images only on Edit item.</p>
     </form>
   </div>
 </div>
+<script>
+var CAT_OPTS = `{% for c in categories %}<option value="{{ c.id }}">{{ c.sort_order }}. {{ c.name }}</option>{% endfor %}`;
+document.getElementById('addRowBtn').onclick = function() {
+  var t = document.querySelector('#bulkRows tbody');
+  var r = document.createElement('tr');
+  r.innerHTML = '<td><input name="names[]" placeholder="Name" style="width:100%;padding:.4rem .5rem;border:1px solid var(--border);border-radius:6px"></td>' +
+    '<td><input name="prices[]" type="number" step="0.01" min="0" style="width:100px;padding:.4rem .5rem;border:1px solid var(--border);border-radius:6px"></td>' +
+    '<td><input name="prep_times[]" type="number" min="0" style="width:90px;padding:.4rem .5rem;border:1px solid var(--border);border-radius:6px" placeholder="15"></td>' +
+    '<td><select name="category_ids[]" required style="width:100%;padding:.4rem .5rem;border:1px solid var(--border);border-radius:6px">' + CAT_OPTS + '</select></td>' +
+    '<td><button type="button" class="btn btn-outline btn-sm" onclick="this.closest(\'tr\').remove()">×</button></td>';
+  t.appendChild(r);
+};
+</script>
 {% endblock %}
