@@ -16,6 +16,11 @@ class StaffSalaryProfile(db.Model):
     work_start = db.Column(db.String(10))  # e.g. 10:00
     work_end = db.Column(db.String(10))
     required_daily_hours = db.Column(db.Numeric(4, 2))
+    # Bank / wallet for salary payout
+    bank_name = db.Column(db.String(100))
+    bank_account_number = db.Column(db.String(50))
+    wallet_provider = db.Column(db.String(50))  # eSewa, Khalti, Fonepay, Other
+    wallet_account_number = db.Column(db.String(50))
     updated_at = db.Column(db.DateTime, default=npt_now_naive, onupdate=npt_now_naive)
 
     user = db.relationship("User", back_populates="salary_profile")

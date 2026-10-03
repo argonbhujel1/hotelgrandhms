@@ -41,6 +41,16 @@
     <p><strong>Role:</strong> {{ user.role.name if user.role else '—' }}</p>
     {% if user.salary_profile %}
     <p><strong>Basic:</strong> Rs. {{ user.salary_profile.basic_salary }} · <strong>Allowance:</strong> Rs. {{ user.salary_profile.allowance }}</p>
+    <p><strong>Bank:</strong>
+      {% if user.salary_profile.bank_account_number %}
+        {{ user.salary_profile.bank_name or 'Bank' }} — {{ user.salary_profile.bank_account_number }}
+      {% else %}—{% endif %}
+    </p>
+    <p><strong>Wallet:</strong>
+      {% if user.salary_profile.wallet_account_number %}
+        {{ user.salary_profile.wallet_provider or 'Wallet' }} — {{ user.salary_profile.wallet_account_number }}
+      {% else %}—{% endif %}
+    </p>
     {% endif %}
 
     {% if current_user.has_permission('staff.role') %}

@@ -272,6 +272,10 @@ def _ensure_schema_patches():
         "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS payment_proof_url VARCHAR(500)",
         "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS client_ip VARCHAR(64)",
         "ALTER TABLE bookings ADD COLUMN IF NOT EXISTS ip_location VARCHAR(255)",
+        "ALTER TABLE staff_salary_profiles ADD COLUMN IF NOT EXISTS bank_name VARCHAR(100)",
+        "ALTER TABLE staff_salary_profiles ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR(50)",
+        "ALTER TABLE staff_salary_profiles ADD COLUMN IF NOT EXISTS wallet_provider VARCHAR(50)",
+        "ALTER TABLE staff_salary_profiles ADD COLUMN IF NOT EXISTS wallet_account_number VARCHAR(50)",
     ]
     try:
         for sql in statements:

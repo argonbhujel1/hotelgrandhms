@@ -53,6 +53,11 @@ def add_staff():
         if User.query.filter_by(username=username).first():
             flash("Username already taken.", "danger")
             return render_template("staff/form.html", user=None, roles=roles)
+        bank_acc = (request.form.get("bank_account_number") or "").strip()
+        wallet_acc = (request.form.get("wallet_account_number") or "").strip()
+        if not bank_acc and not wallet_acc:
+            flash("Bank account number वा Wallet account number मध्ये कम्तिमा एक अनिवार्य छ।", "danger")
+            return render_template("staff/form.html", user=None, roles=roles)
         plain_password = (request.form.get("password") or "changeme123").strip()
         u = User(
             username=username,
@@ -78,6 +83,10 @@ def add_staff():
             work_start=request.form.get("work_start") or None,
             work_end=request.form.get("work_end") or None,
             required_daily_hours=Decimal(request.form.get("required_daily_hours")) if request.form.get("required_daily_hours") else None,
+            bank_name=(request.form.get("bank_name") or "").strip() or None,
+            bank_account_number=bank_acc or None,
+            wallet_provider=(request.form.get("wallet_provider") or "").strip() or None,
+            wallet_account_number=wallet_acc or None,
         ))
         db.session.commit()
         log_activity("create_staff", module="staff", record_id=u.id)
@@ -255,6 +264,22 @@ def edit_staff(uid):
             pass
         if current_user.has_permission("staff.role") or current_user.role_code in ("super_admin", "admin"):
             user.role_id = new_role_id
+        # Payment account (bank or wallet — at least one required)
+        bank_acc = (request.form.get("bank_account_number") or "").strip()
+        wallet_acc = (request.form.get("wallet_account_number") or "").strip()
+        if not bank_acc and not wallet_acc:
+            flash("Bank account number वा Wallet account number मध्ये कम्तिमा एक अनिवार्य छ।", "danger")
+            return render_template("staff/form.html", user=user, roles=roles)
+        sp = user.salary_profile
+        if not sp:
+            from app.models.staff_hr import StaffSalaryProfile
+            from decimal import Decimal
+            sp = StaffSalaryProfile(user_id=user.id, basic_salary=Decimal("0"), allowance=Decimal("0"))
+            db.session.add(sp)
+        sp.bank_name = (request.form.get("bank_name") or "").strip() or None
+        sp.bank_account_number = bank_acc or None
+        sp.wallet_provider = (request.form.get("wallet_provider") or "").strip() or None
+        sp.wallet_account_number = wallet_acc or None
         db.session.commit()
         new_role = user.role.code if user.role else None
         if old_role != new_role:
