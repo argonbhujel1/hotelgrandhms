@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block content %}
+<h2 style="margin-bottom:1rem">Alerts</h2>
+<div class="panel">
+  <div class="panel-header">New tasks for you</div>
+  <div class="panel-body">
+    {% for t in my_new %}
+    <div style="padding:.6rem 0;border-bottom:1px solid var(--border)">
+      🔔 Room <strong>{{ t.room.number if t.room else t.room_id }}</strong> cleaning task assigned
+      <small style="color:var(--muted)"> · {{ t.assigned_at | format_npt('%d %b %H:%M') if t.assigned_at else '' }}</small>
+      <form method="post" action="{{ url_for('housekeeping.task_start', tid=t.id) }}" style="display:inline;margin-left:.5rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-outline btn-sm">Start</button>
+      </form>
+    </div>
+    {% else %}
+    <p style="color:var(--muted)">No new assignments.</p>
+    {% endfor %}
+  </div>
+</div>
+{% if dirty_unassigned is defined and dirty_unassigned %}
+<div class="panel" style="margin-top:1rem">
+  <div class="panel-header">Dirty rooms (unassigned)</div>
+  <div class="panel-body">
+    {% for r in dirty_unassigned %}
+    <div style="padding:.4rem 0">Room <strong>{{ r.number }}</strong> — needs assignment
+      <a href="{{ url_for('housekeeping.assign') }}" class="btn btn-outline btn-sm">Assign</a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

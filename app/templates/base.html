@@ -49,6 +49,12 @@
       <div class="nav-section">Operations</div>
       {% if current_user.has_permission('rooms.view') %}
       <a href="{{ url_for('rooms.list_rooms') }}">Rooms</a>
+      {% if current_user.has_permission('rooms.status') or (current_user.role and current_user.role.code == 'housekeeping') %}
+      <a href="{{ url_for('housekeeping.home') }}">Housekeeping</a>
+      {% endif %}
+      {% if current_user.has_permission('rooms.status') %}
+      <a href="{{ url_for('housekeeping.assign') }}">Assign cleaning</a>
+      {% endif %}
       <a href="{{ url_for('rooms.list_tables') }}">Tables</a>
       <a href="{{ url_for('rooms.qr_list') }}">QR Codes</a>
       {% endif %}
@@ -113,6 +119,26 @@
 
 {# ── Mobile / PWA bottom navigation (permission-based) ── #}
 <nav class="bottom-nav no-print" id="bottomNav" aria-label="Staff app navigation">
+  {% set is_hk = current_user.role and current_user.role.code == 'housekeeping' %}
+  {% if is_hk %}
+  {# Housekeeping app bar: Home | Rooms | Tasks | Alerts | Profile #}
+  <a href="{{ url_for('housekeeping.home') }}" class="bn-item {% if request.endpoint == 'housekeeping.home' %}active{% endif %}">
+    <span class="bn-ico">🏠</span><span class="bn-lbl">Home</span>
+  </a>
+  <a href="{{ url_for('housekeeping.rooms') }}" class="bn-item {% if request.endpoint == 'housekeeping.rooms' %}active{% endif %}">
+    <span class="bn-ico">🛏</span><span class="bn-lbl">Rooms</span>
+  </a>
+  <a href="{{ url_for('housekeeping.tasks') }}" class="bn-fab" title="Tasks">
+    <span class="bn-fab-plus">🧹</span>
+  </a>
+  <a href="{{ url_for('housekeeping.alerts') }}" class="bn-item {% if request.endpoint == 'housekeeping.alerts' %}active{% endif %}">
+    <span class="bn-ico">🔔</span><span class="bn-lbl">Alerts</span>
+  </a>
+  <a href="{{ url_for('staff.my_attendance') }}" class="bn-item {% if request.endpoint == 'staff.my_attendance' %}active{% endif %}">
+    <span class="bn-ico">👤</span><span class="bn-lbl">Profile</span>
+  </a>
+  {% else %}
+
   {% if current_user.has_permission('dashboard.view') %}
   <a href="{{ url_for('dashboard.index') }}" class="bn-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
     <span class="bn-ico">🏠</span><span class="bn-lbl">Home</span>
@@ -180,6 +206,8 @@
   <a href="{{ url_for('staff.my_attendance') }}" class="bn-item {% if request.endpoint == 'staff.my_attendance' %}active{% endif %}">
     <span class="bn-ico">👤</span><span class="bn-lbl">Me</span>
   </a>
+
+  {% endif %}
 </nav>
 {% else %}
   {% block public %}{% endblock %}

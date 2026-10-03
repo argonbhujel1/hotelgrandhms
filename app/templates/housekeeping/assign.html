@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Assign Cleaning{% endblock %}
+{% block content %}
+<h2 style="margin-bottom:.5rem">Assign cleaning task</h2>
+<p style="color:var(--muted);margin-bottom:1rem">Checkout rooms appear as Dirty. Select staff → Assign → they get a push notification.</p>
+
+{% if dirty %}
+<div class="panel" style="max-width:520px;margin-bottom:1.25rem">
+  <div class="panel-header">Assign</div>
+  <div class="panel-body">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group"><label>Dirty room *</label>
+        <select name="room_id" required>
+          {% for r in dirty %}
+          <option value="{{ r.id }}">Room {{ r.number }}{% if open_map.get(r.id) %} (already: {{ open_map[r.id].assigned_to.full_name if open_map[r.id].assigned_to else 'assigned' }}){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group"><label>Housekeeping staff *</label>
+        <select name="staff_id" required>
+          {% for u in staff %}
+          <option value="{{ u.id }}">{{ u.full_name }} ({{ u.role.name if u.role else '' }})</option>
+          {% else %}
+          <option value="">No housekeeping staff — add role Housekeeping first</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group"><label>Notes</label><input name="notes" placeholder="Optional"></div>
+      <button type="submit" class="btn btn-primary">Assign + Notify</button>
+    </form>
+  </div>
+</div>
+{% else %}
+<div class="panel"><div class="panel-body" style="color:var(--muted)">No dirty rooms right now.</div></div>
+{% endif %}
+
+<div class="panel">
+  <div class="panel-header">Dirty room list</div>
+  <div class="panel-body table-wrap">
+    <table class="data">
+      <thead><tr><th>Room</th><th>Status</th><th>Assigned to</th></tr></thead>
+      <tbody>
+      {% for r in dirty %}
+        {% set t = open_map.get(r.id) %}
+        <tr>
+          <td><strong>{{ r.number }}</strong></td>
+          <td><span class="badge badge-dirty">dirty</span></td>
+          <td>{% if t %}{{ t.assigned_to.full_name if t.assigned_to else '—' }} ({{ t.status }}){% else %}<em style="color:var(--muted)">Unassigned</em>{% endif %}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="3">None</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

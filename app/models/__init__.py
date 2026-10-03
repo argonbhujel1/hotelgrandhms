@@ -1,6 +1,6 @@
 from app.models.user import User, Role, Permission, RolePermission, StaffPermission, StaffSession, StaffLoginHistory
 from app.models.activity import ActivityLog, AuditLog, SecurityEvent
-from app.models.room import Room, RestaurantTable, QRCode
+from app.models.room import Room, RestaurantTable, QRCode, CleaningTask
 from app.models.menu import MenuCategory, MenuItem
 from app.models.booking import Booking
 from app.models.order import Order, OrderItem, OrderStatusHistory
@@ -18,7 +18,7 @@ __all__ = [
     "User", "Role", "Permission", "RolePermission", "StaffPermission",
     "StaffSession", "StaffLoginHistory",
     "ActivityLog", "AuditLog", "SecurityEvent",
-    "Room", "RestaurantTable", "QRCode",
+    "Room", "RestaurantTable", "QRCode", "CleaningTask",
     "MenuCategory", "MenuItem",
     "Booking",
     "Order", "OrderItem", "OrderStatusHistory",

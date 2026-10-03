@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Housekeeping{% endblock %}
+{% block content %}
+<h2 style="margin-bottom:.25rem">Housekeeping</h2>
+<p style="color:var(--muted);margin-bottom:1rem">Nepal time · {{ npt_now.strftime('%d %b %Y, %H:%M') if npt_now else '' }}</p>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.75rem;margin-bottom:1.25rem">
+  <div class="panel" style="margin:0"><div class="panel-body" style="text-align:center"><div style="font-size:1.5rem;font-weight:700;color:#c0392b">{{ dirty_count }}</div><small>Dirty</small></div></div>
+  <div class="panel" style="margin:0"><div class="panel-body" style="text-align:center"><div style="font-size:1.5rem;font-weight:700;color:#2980b9">{{ cleaning_count }}</div><small>Cleaning</small></div></div>
+  <div class="panel" style="margin:0"><div class="panel-body" style="text-align:center"><div style="font-size:1.5rem;font-weight:700;color:#2d8a4e">{{ ready_count }}</div><small>Ready</small></div></div>
+</div>
+
+{% if my_pending or my_cleaning %}
+<div class="panel">
+  <div class="panel-header">My active tasks</div>
+  <div class="panel-body">
+    {% for t in my_cleaning %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border);gap:.5rem;flex-wrap:wrap">
+      <div><strong>Room {{ t.room.number if t.room else t.room_id }}</strong> <span class="badge badge-cleaning">cleaning</span></div>
+      <form method="post" action="{{ url_for('housekeeping.task_complete', tid=t.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-primary btn-sm">Complete → Ready</button>
+      </form>
+    </div>
+    {% endfor %}
+    {% for t in my_pending %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:.6rem 0;border-bottom:1px solid var(--border);gap:.5rem;flex-wrap:wrap">
+      <div><strong>Room {{ t.room.number if t.room else t.room_id }}</strong> <span class="badge badge-dirty">pending</span>
+        {% if t.notes %}<br><small style="color:var(--muted)">{{ t.notes }}</small>{% endif %}
+      </div>
+      <form method="post" action="{{ url_for('housekeeping.task_start', tid=t.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-outline btn-sm">Start cleaning</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="panel"><div class="panel-body" style="color:var(--muted)">No active tasks assigned to you.</div></div>
+{% endif %}
+
+{% if my_done %}
+<div class="panel" style="margin-top:1rem">
+  <div class="panel-header">Recently completed</div>
+  <div class="panel-body table-wrap">
+    <table class="data">
+      <thead><tr><th>Room</th><th>Completed</th></tr></thead>
+      <tbody>
+      {% for t in my_done %}
+        <tr><td>{{ t.room.number if t.room else t.room_id }}</td><td>{{ t.completed_at | format_npt('%d %b %H:%M') if t.completed_at else '—' }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

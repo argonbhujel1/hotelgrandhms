@@ -65,3 +65,24 @@ class QRCode(db.Model):
         if self.source_type == "table" and self.table:
             return f"TABLE {self.table.number}"
         return "UNKNOWN"
+
+
+
+class CleaningTask(db.Model):
+    """Housekeeping assignment: Dirty → Assign → Cleaning → Complete (Ready)."""
+    __tablename__ = "cleaning_tasks"
+    id = db.Column(db.Integer, primary_key=True)
+    room_id = db.Column(db.Integer, db.ForeignKey("rooms.id"), nullable=False, index=True)
+    assigned_to_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    assigned_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    status = db.Column(db.String(20), default="pending", index=True)
+    # pending, cleaning, completed, cancelled
+    notes = db.Column(db.String(255))
+    assigned_at = db.Column(db.DateTime, default=npt_now_naive)
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=npt_now_naive)
+
+    room = db.relationship("Room", backref=db.backref("cleaning_tasks", lazy="dynamic"))
+    assigned_to = db.relationship("User", foreign_keys=[assigned_to_id])
+    assigned_by = db.relationship("User", foreign_keys=[assigned_by_id])

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}HK Rooms{% endblock %}
+{% block content %}
+<h2 style="margin-bottom:1rem">Rooms status</h2>
+<form method="get" style="display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap">
+  <select name="status" style="padding:.45rem;border:1px solid var(--border);border-radius:6px">
+    <option value="">Dirty / Cleaning / Ready</option>
+    {% for s in ['dirty','cleaning','available','maintenance'] %}
+    <option value="{{ s }}" {% if status==s %}selected{% endif %}>{{ s|title }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-outline btn-sm" type="submit">Filter</button>
+</form>
+<div class="panel">
+  <div class="panel-body table-wrap">
+    <table class="data">
+      <thead><tr><th>Room</th><th>Status</th><th>Task</th><th></th></tr></thead>
+      <tbody>
+      {% for r in rooms %}
+        {% set task = open_tasks.get(r.id) %}
+        <tr>
+          <td><strong>{{ r.number }}</strong></td>
+          <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+          <td>{% if task %}{{ task.assigned_to.full_name if task.assigned_to else '—' }} ({{ task.status }}){% else %}—{% endif %}</td>
+          <td>
+            {% if task and task.assigned_to_id == current_user.id %}
+              {% if task.status == 'pending' %}
+              <form method="post" action="{{ url_for('housekeeping.task_start', tid=task.id) }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-outline btn-sm">Start</button>
+              </form>
+              {% elif task.status == 'cleaning' %}
+              <form method="post" action="{{ url_for('housekeeping.task_complete', tid=task.id) }}" style="display:inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-primary btn-sm">Complete</button>
+              </form>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">No rooms.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}My Tasks{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">
+  <h2>Cleaning tasks</h2>
+  {% if is_admin %}
+  <a href="{{ url_for('housekeeping.assign') }}" class="btn btn-primary">Assign task</a>
+  {% endif %}
+</div>
+<div class="panel">
+  <div class="panel-body table-wrap">
+    <table class="data">
+      <thead><tr><th>Room</th><th>Status</th><th>Assigned</th><th></th></tr></thead>
+      <tbody>
+      {% for t in tasks %}
+        <tr>
+          <td><strong>{{ t.room.number if t.room else t.room_id }}</strong>
+            {% if t.notes %}<br><small style="color:var(--muted)">{{ t.notes }}</small>{% endif %}
+          </td>
+          <td><span class="badge badge-{{ t.status }}">{{ t.status }}</span></td>
+          <td>{{ t.assigned_at | format_npt('%d %b %H:%M') if t.assigned_at else '—' }}</td>
+          <td style="white-space:nowrap">
+            {% if t.status == 'pending' and (t.assigned_to_id == current_user.id or is_admin) %}
+            <form method="post" action="{{ url_for('housekeeping.task_start', tid=t.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-outline btn-sm">Start</button>
+            </form>
+            {% endif %}
+            {% if t.status == 'cleaning' and (t.assigned_to_id == current_user.id or is_admin) %}
+            <form method="post" action="{{ url_for('housekeeping.task_complete', tid=t.id) }}" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-primary btn-sm">Complete</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4">No tasks.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

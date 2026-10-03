@@ -156,6 +156,7 @@ def create_app(config_name=None):
     from app.routes.settings import settings_bp
     from app.routes.qr_public import qr_public_bp
     from app.routes.api import api_bp
+    from app.routes.housekeeping import hk_bp
 
     flask_app.register_blueprint(auth_bp)
     flask_app.register_blueprint(dashboard_bp)
@@ -172,6 +173,7 @@ def create_app(config_name=None):
     flask_app.register_blueprint(settings_bp, url_prefix="/settings")
     flask_app.register_blueprint(qr_public_bp)  # /order/<token>
     flask_app.register_blueprint(api_bp, url_prefix="/api")
+    flask_app.register_blueprint(hk_bp, url_prefix="/housekeeping")
 
     # Exempt public QR order API from CSRF where needed (token-based)
     for _vf in ("qr_public.place_order", "qr_public.place_order_qr_path"):

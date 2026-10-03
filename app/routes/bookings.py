@@ -184,10 +184,10 @@ def update_status(bid):
         try:
             from app.services.push_service import notify_roles
             notify_roles(
-                ["staff", "admin", "super_admin", "reception"],
-                "🔔 Room needs cleaning",
-                f"Room {room.number} checked out — mark clean when done",
-                url=f"/rooms/?status=dirty",
+                ["housekeeping", "admin", "super_admin", "reception"],
+                "🔔 Room checkout — Dirty",
+                f"Room {room.number} checked out. Assign cleaning task.",
+                url="/housekeeping/assign",
                 tag=f"hk-dirty-{room.id}",
             )
         except Exception:
