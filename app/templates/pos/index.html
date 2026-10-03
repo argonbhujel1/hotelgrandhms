@@ -48,23 +48,11 @@
     <div class="panel-body">
       <div class="form-group">
         <label>Source</label>
-        <select id="posSource">
-          <option value="COUNTER">Counter (walk-in)</option>
-          <option value="ROOM">Room</option>
-          <option value="TABLE">Table</option>
+        <select id="posSource" disabled>
+          <option value="COUNTER" selected>Counter (walk-in only)</option>
         </select>
-      </div>
-      <div class="form-group" id="roomSelect" style="display:none">
-        <label>Room</label>
-        <select id="posRoom">
-          {% for r in rooms %}<option value="{{ r.id }}">{{ r.number }} — {{ r.room_type }}</option>{% else %}<option value="">No rooms</option>{% endfor %}
-        </select>
-      </div>
-      <div class="form-group" id="tableSelect" style="display:none">
-        <label>Table</label>
-        <select id="posTable">
-          {% for t in tables %}<option value="{{ t.id }}">{{ t.number }}</option>{% else %}<option value="">No tables</option>{% endfor %}
-        </select>
+        <input type="hidden" id="posSourceValue" value="COUNTER">
+        <p class="muted" style="font-size:.8rem;margin-top:.35rem">Room / table orders come from QR — they auto-add to the open room/table bill in Billing until you Print bill.</p>
       </div>
       <div id="folioBanner" style="display:none;background:#fff8e6;border:1px solid var(--gold);border-radius:8px;padding:.65rem;margin-bottom:.75rem;font-size:.85rem"></div>
       <div class="form-group"><label>Customer name</label><input id="posCustomer" placeholder="Name"></div>

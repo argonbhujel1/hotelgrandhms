@@ -17,6 +17,41 @@ billing_bp = Blueprint("billing", __name__)
 @login_required
 @permission_required("billing.view")
 def list_bills():
+    # Auto-open room folios for active bookings missing one
+    try:
+        from app.models.booking import Booking
+        from app.services.folio_service import get_or_open_folio
+        from app.models.room import Room
+        active = Booking.query.filter(
+            Booking.status.in_(["confirmed", "checked_in", "booked", "pending"])
+        ).all()
+        for b in active:
+            if not b.room_id:
+                continue
+            existing = Folio.query.filter_by(status="open", source="ROOM", room_id=b.room_id).first()
+            if existing:
+                continue
+            room = db.session.get(Room, b.room_id)
+            folio = get_or_open_folio(
+                "ROOM",
+                room_id=b.room_id,
+                customer_name=getattr(b, "guest_name", None) or "Guest",
+                user_id=current_user.id,
+                room_rate=(room.price if room else 0) or 0,
+            )
+            try:
+                ci = getattr(b, "check_in", None)
+                if ci and hasattr(folio, "check_in_date"):
+                    folio.check_in_date = ci.date() if hasattr(ci, "date") else ci
+            except Exception:
+                pass
+        db.session.commit()
+    except Exception:
+        try:
+            db.session.rollback()
+        except Exception:
+            pass
+
     bills = Bill.query.order_by(Bill.created_at.desc()).limit(100).all()
     # Pending: delivered orders without bill, and open folios
     pending_orders = (

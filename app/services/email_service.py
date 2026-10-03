@@ -132,19 +132,91 @@ def build_html(
     body_html: str,
     details: Optional[list] = None,
     highlight: Optional[str] = None,
-    closing: str = "Thank you for being part of Hotel Grand Garden.",
+    closing: str = "Thank you — Hotel Grand Garden",
 ) -> str:
-    ctx = _settings_ctx()
-    ctx.update(
-        subject=subject,
-        title=title,
-        recipient_name=recipient_name or "Team Member",
-        body_html=body_html,
-        details=details or [],
-        highlight=highlight,
-        closing=closing,
-    )
-    return render_template_string(EMAIL_SHELL, **ctx)
+    """Decorative HTML email with red / yellow / green brand bar."""
+    logo = ""
+    try:
+        from app.models.settings import BusinessSettings, SystemSetting
+        s = BusinessSettings.get_settings()
+        logo = (getattr(s, "logo_url", None) or "") if s else ""
+        if not logo:
+            try:
+                logo = SystemSetting.get("logo_url") or ""
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    logo_block = ""
+    if logo:
+        src = logo if str(logo).startswith("http") else logo
+        logo_block = f'<img src="{src}" alt="Hotel Grand Garden" style="max-height:64px;width:auto;margin:0 auto 10px;display:block;border-radius:10px;background:#fff;padding:6px">'
+
+    rows = ""
+    if details:
+        for label, value in details:
+            rows += f"""<tr>
+              <td style="padding:8px 12px;font-size:13px;color:#5a6a80;border-bottom:1px solid #eef2ee">{label}</td>
+              <td style="padding:8px 12px;font-size:14px;color:#0a1628;font-weight:600;text-align:right;border-bottom:1px solid #eef2ee">{value}</td>
+            </tr>"""
+
+    details_block = ""
+    if rows:
+        details_block = f"""
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+          style="margin:16px 0;border:1px solid #e8eee6;border-radius:12px;overflow:hidden;background:#fafcf9">
+          {rows}
+        </table>"""
+
+    highlight_block = ""
+    if highlight:
+        highlight_block = f"""
+        <div style="margin:16px 0;padding:14px 18px;border-radius:12px;
+          background:linear-gradient(135deg,#fff8e6,#f0faf3);
+          border:1px solid #f0e0a8;text-align:center">
+          <span style="font-size:18px;font-weight:700;color:#0a1628;letter-spacing:0.03em">{highlight}</span>
+        </div>"""
+
+    return f"""<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{subject}</title></head>
+<body style="margin:0;padding:0;background:#eef2ec;font-family:'Segoe UI',Arial,Helvetica,sans-serif">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ec;padding:28px 12px">
+<tr><td align="center">
+  <table role="presentation" width="560" cellpadding="0" cellspacing="0"
+    style="max-width:560px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 32px rgba(10,22,40,0.08)">
+    <tr><td style="height:5px;background:linear-gradient(90deg,#e6392b,#f4c430,#2d8a4e);font-size:0;line-height:0">&nbsp;</td></tr>
+    <tr><td style="padding:26px 28px 6px;text-align:center;background:linear-gradient(180deg,#ffffff 0%,#f9fbf7 100%)">
+      {logo_block}
+      <div style="font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:#2d8a4e;font-weight:700;margin-bottom:4px">Hotel Grand Garden</div>
+      <h1 style="margin:0;font-size:20px;color:#0a1628;font-weight:700">{title}</h1>
+      <p style="margin:6px 0 0;font-size:13px;color:#5a6a80">Hello {recipient_name or "Guest"}</p>
+    </td></tr>
+    <tr><td style="padding:12px 28px 8px">
+      <div style="height:1px;background:linear-gradient(90deg,transparent,#e6392b40,#f4c43080,#2d8a4e40,transparent)"></div>
+    </td></tr>
+    <tr><td style="padding:8px 28px 20px;color:#1a1a1a;font-size:15px;line-height:1.6">
+      {body_html}
+      {highlight_block}
+      {details_block}
+      <p style="margin:20px 0 0;font-size:13px;color:#5a6a80">{closing}</p>
+    </td></tr>
+    <tr><td style="padding:0 28px 24px">
+      <div style="background:#f4f8f3;border-radius:12px;padding:14px 16px;text-align:center;border:1px solid #e0eae0">
+        <p style="margin:0;font-size:12px;color:#5a6a80;line-height:1.5">
+          Urlabari-5, Morang, Nepal<br>
+          <span style="color:#2d8a4e">Family Restaurant &amp; Lodge</span>
+        </p>
+      </div>
+    </td></tr>
+    <tr><td style="height:4px;background:linear-gradient(90deg,#2d8a4e,#f4c430,#e6392b);font-size:0">&nbsp;</td></tr>
+  </table>
+  <p style="margin:14px 0 0;font-size:11px;color:#9aa5b5;text-align:center">This is an automated message from Hotel Grand Garden HMS</p>
+</td></tr>
+</table>
+</body></html>"""
+
 
 
 def send_email(to_address: str, subject: str, html_body: str, text_fallback: str = "") -> bool:
@@ -166,7 +238,7 @@ def send_email(to_address: str, subject: str, html_body: str, text_fallback: str
     use_tls = current_app.config.get("MAIL_USE_TLS", True)
     username = current_app.config.get("MAIL_USERNAME")
     password = current_app.config.get("MAIL_PASSWORD")
-    sender = current_app.config.get("MAIL_DEFAULT_SENDER") or username or "noreply@hotelgrandgarden.com"
+    sender = current_app.config.get("MAIL_DEFAULT_SENDER") or username or "info@hotelgrand.com.np"
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
@@ -564,6 +636,7 @@ def _order_received(name, **kw):
 def get_admin_emails():
     """Business + staff with admin role emails."""
     emails = set()
+    emails.add("info@hotelgrand.com.np")
     try:
         from app.models.settings import BusinessSettings
         s = BusinessSettings.get_settings()

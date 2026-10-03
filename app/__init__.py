@@ -376,7 +376,7 @@ def _seed_if_empty():
     # Default admin user
     admin = User(
         username="admin",
-        email="admin@hotelgrandgarden.com",
+        email="info@hotelgrand.com.np",
         full_name="System Administrator",
         employee_id="HG-EMP-001",
         phone="9816374804",
@@ -404,7 +404,7 @@ def _seed_if_empty():
         business_name="Family Restaurant & Bar",
         address="Urlabari-5, Morang",
         phone="9816374804",
-        email="info@hotelgrandgarden.com",
+        email="info@hotelgrand.com.np",
         pan="",  # must be set before billing
         vat_number="",
         currency="Rs.",

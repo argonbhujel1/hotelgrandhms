@@ -55,6 +55,29 @@ def add_booking():
         if room and b.status in ("confirmed", "checked_in"):
             room.status = "occupied" if b.status == "checked_in" else "reserved"
         db.session.add(b)
+        db.session.flush()
+        folio_id = None
+        try:
+            from app.services.folio_service import get_or_open_folio
+            folio = get_or_open_folio(
+                "ROOM",
+                room_id=room_id,
+                customer_name=b.guest_name,
+                user_id=current_user.id,
+                room_rate=(room.price if room else 0) or 0,
+            )
+            try:
+                folio.check_in_date = b.check_in.date() if hasattr(b.check_in, "date") else b.check_in
+            except Exception:
+                pass
+            try:
+                folio.check_out_date = b.check_out.date() if hasattr(b.check_out, "date") else b.check_out
+            except Exception:
+                pass
+            folio_id = folio.id
+        except Exception as fe:
+            from flask import current_app
+            current_app.logger.warning("folio open on booking: %s", fe)
         db.session.commit()
         log_activity("create_booking", module="bookings", record_id=b.id)
         try:
@@ -69,6 +92,9 @@ def add_booking():
             )
         except Exception:
             pass
+        if folio_id:
+            flash("Booking created — room folio open in Billing (orders auto-add until Print bill).", "success")
+            return redirect(url_for("billing.view_folio", folio_id=folio_id))
         flash("Booking created.", "success")
         return redirect(url_for("bookings.list_bookings"))
     return render_template("bookings/form.html", booking=None, rooms=rooms)

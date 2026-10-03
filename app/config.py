@@ -80,7 +80,8 @@ class Config:
     MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", "true").lower() == "true"
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", "noreply@hotelgrandgarden.com")
+    HOTEL_EMAIL = os.environ.get("HOTEL_EMAIL", "info@hotelgrand.com.np")
+    MAIL_DEFAULT_SENDER = os.environ.get("MAIL_DEFAULT_SENDER", "info@hotelgrand.com.np")
 
     # Public website
     PUBLIC_SITE_URL = os.environ.get("PUBLIC_SITE_URL", "https://hotelgrand.com.np").rstrip("/")

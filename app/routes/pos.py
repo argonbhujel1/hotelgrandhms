@@ -120,15 +120,10 @@ def folio_info():
 @permission_required("pos.complete")
 def checkout():
     data = request.get_json(silent=True) or {}
-    source = (data.get("source") or "COUNTER").upper()
-    room_id = data.get("room_id") or None
-    table_id = data.get("table_id") or None
-    if room_id:
-        room_id = int(room_id)
-        source = "ROOM"
-    if table_id:
-        table_id = int(table_id)
-        source = "TABLE"
+    # POS is counter-only. Room/table orders use QR and attach to open folios in Billing.
+    source = "COUNTER"
+    room_id = None
+    table_id = None
 
     items_raw = data.get("items") or []
     if not items_raw:
