@@ -19,9 +19,13 @@
   {% endif %}
   {% endif %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  {% if vapid_public_key %}<meta name="vapid-public-key" content="{{ vapid_public_key }}">{% endif %}
   {% block head %}{% endblock %}
 </head>
-<body>
+<body{% if current_user.is_authenticated and current_user.role %} data-role="{{ current_user.role.code }}"{% endif %}>
 {% if current_user.is_authenticated %}
 <div class="app-shell">
   <aside class="sidebar" id="sidebar">
@@ -60,9 +64,7 @@
       {% if current_user.has_permission('kitchen.view') %}
       <a href="{{ url_for('kitchen.index') }}">Kitchen / KOT</a>
       {% endif %}
-      {% if current_user.has_permission('pos.open') %}
-      <a href="{{ url_for('pos.index') }}">POS</a>
-      {% endif %}
+      {# POS removed — use Manual Order + Billing #}
       {% if current_user.has_permission('billing.view') %}
       <a href="{{ url_for('billing.list_bills') }}">Billing</a>
       {% endif %}
@@ -113,5 +115,8 @@
 {% endif %}
 <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 {% block scripts %}{% endblock %}
+{% if current_user.is_authenticated %}
+<script src="{{ url_for('static', filename='js/push.js') }}" defer></script>
+{% endif %}
 </body>
 </html>

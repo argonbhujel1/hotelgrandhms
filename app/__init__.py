@@ -1,3 +1,34 @@
+
+def _ensure_menu_categories_hms():
+    """Ensure fixed restaurant/bar categories exist (idempotent)."""
+    from app.models.menu import MenuCategory
+    names = [
+        "Starters & Snacks", "Momo", "Chowmein & Noodles", "Rice & Biryani",
+        "Nepali Khana", "Soup", "Chicken", "Mutton & Buff", "Vegetarian",
+        "Continental", "Indian", "Breakfast", "Pasta",
+        "Tea & Coffee", "Cold Drinks", "Fresh Juice & Mocktails", "Bar", "Cigarette",
+    ]
+    existing = {c.name.strip().lower(): c for c in MenuCategory.query.all()}
+    changed = False
+    for i, name in enumerate(names, 1):
+        key = name.lower()
+        if key not in existing:
+            db.session.add(MenuCategory(name=name, sort_order=i, is_active=True))
+            changed = True
+        else:
+            c = existing[key]
+            if c.sort_order != i:
+                c.sort_order = i
+                changed = True
+            if not c.is_active:
+                c.is_active = True
+                changed = True
+    if changed:
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
 import os
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
@@ -47,6 +78,16 @@ def create_app(config_name=None):
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
+
+    @app.context_processor
+    def _inject_push():
+        try:
+            from app.services.push_service import vapid_keys
+            return {"vapid_public_key": vapid_keys()["public"]}
+        except Exception:
+            return {"vapid_public_key": ""}
+
+
     csrf.init_app(app)
 
     login_manager.login_view = "auth.login"
@@ -82,7 +123,8 @@ def create_app(config_name=None):
     app.register_blueprint(menu_bp, url_prefix="/menu")
     app.register_blueprint(orders_bp, url_prefix="/orders")
     app.register_blueprint(kitchen_bp, url_prefix="/kitchen")
-    app.register_blueprint(pos_bp, url_prefix="/pos")
+    # POS removed — use orders/manual + billing
+    # app.register_blueprint(pos_bp, url_prefix="/pos")
     app.register_blueprint(billing_bp, url_prefix="/billing")
     app.register_blueprint(staff_bp, url_prefix="/staff")
     app.register_blueprint(payroll_bp, url_prefix="/payroll")
@@ -93,9 +135,9 @@ def create_app(config_name=None):
     # Exempt public QR order API from CSRF where needed (token-based)
     csrf.exempt(app.view_functions.get("qr_public.place_order"))
     csrf.exempt(app.view_functions.get("qr_public.place_order_qr_path"))
-    csrf.exempt(app.view_functions.get("pos.checkout"))
-    csrf.exempt(app.view_functions.get("pos.close_folio"))
-    csrf.exempt(app.view_functions.get("pos.folio_info"))
+    # csrf.exempt pos.checkout
+    # csrf.exempt pos.close_folio
+    # csrf.exempt pos.folio_info
 
     @app.before_request
     def maintenance_gate():
@@ -217,6 +259,11 @@ def create_app(config_name=None):
 
     with app.app_context():
         try:
+            import app.models  # noqa: F401 — register all models
+            try:
+                import app.models.push  # noqa: F401
+            except Exception:
+                pass
             db.create_all()
         except Exception as e:
             app.logger.warning("create_all skipped: %s", e)
@@ -226,6 +273,10 @@ def create_app(config_name=None):
             pass
         try:
             _ensure_schema_patches()
+            try:
+                _ensure_menu_categories_hms()
+            except Exception:
+                pass
         except Exception:
             pass
         try:
@@ -276,6 +327,7 @@ def _ensure_schema_patches():
         "ALTER TABLE staff_salary_profiles ADD COLUMN IF NOT EXISTS bank_account_number VARCHAR(50)",
         "ALTER TABLE staff_salary_profiles ADD COLUMN IF NOT EXISTS wallet_provider VARCHAR(50)",
         "ALTER TABLE staff_salary_profiles ADD COLUMN IF NOT EXISTS wallet_account_number VARCHAR(50)",
+        "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS prep_time_minutes INTEGER",
     ]
     try:
         for sql in statements:
@@ -443,8 +495,14 @@ def _seed_if_empty():
     )
     db.session.add(wh)
 
-    # Default menu categories
-    for i, name in enumerate(["Drinks", "Food", "Breakfast", "Lunch", "Dinner"], 1):
+    # Default menu categories (food + bar & drinks)
+    default_cats = [
+        "Starters & Snacks", "Momo", "Chowmein & Noodles", "Rice & Biryani",
+        "Nepali Khana", "Soup", "Chicken", "Mutton & Buff", "Vegetarian",
+        "Continental", "Indian", "Breakfast", "Pasta",
+        "Tea & Coffee", "Cold Drinks", "Fresh Juice & Mocktails", "Bar", "Cigarette",
+    ]
+    for i, name in enumerate(default_cats, 1):
         db.session.add(MenuCategory(name=name, sort_order=i, is_active=True))
 
     db.session.commit()

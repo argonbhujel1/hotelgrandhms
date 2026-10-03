@@ -20,21 +20,22 @@
         <div class="form-group" id="manTable" style="display:none"><label>Table</label>
           <select name="table_id">{% for t in tables %}<option value="{{ t.id }}">{{ t.number }}</option>{% endfor %}</select>
         </div>
-        <div class="form-group"><label>Customer (optional)</label><input name="customer_name"></div>
+        <div class="form-group"><label>Customer name</label><input name="customer_name"></div>
+        <div class="form-group"><label>Customer email *</label><input name="customer_email" type="email" required placeholder="guest@gmail.com"></div>
       </div>
       <div class="form-group"><label>Notes</label><textarea name="notes" rows="2"></textarea></div>
       <h3 style="margin:1rem 0 .5rem;font-size:1rem">Items</h3>
       {% for i in items %}
       <div style="display:flex;gap:.75rem;align-items:center;padding:.35rem 0;border-bottom:1px solid var(--border)">
         <input type="hidden" name="item_id" value="{{ i.id }}">
-        <span style="flex:1">{{ i.name }} <small style="color:var(--muted)">Rs. {{ i.price }}</small></span>
+        <span style="flex:1">{{ i.name }} <small style="color:var(--muted)">Rs. {{ i.price }}{% if i.prep_time_minutes %} · {{ i.prep_time_minutes }}m{% endif %}</small></span>
         <input type="number" name="qty" value="0" min="0" style="width:70px;padding:.35rem;border:1px solid var(--border);border-radius:6px">
       </div>
       {% else %}
       <p style="color:var(--muted)">No menu items. Add menu first.</p>
       {% endfor %}
       <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Create Order</button>
+        <button type="submit" class="btn btn-primary">Create Order → Billing</button>
         <a href="{{ url_for('orders.list_orders') }}" class="btn btn-outline">Cancel</a>
       </div>
     </form>

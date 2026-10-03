@@ -72,7 +72,7 @@ def set_status(oid):
 @login_required
 @permission_required("orders.accept")
 def manual_add():
-    """Admin/staff manual order entry (same as POS without immediate bill)."""
+    """Manual order entry — email required; order goes straight onto open folio (billing)."""
     categories = MenuCategory.query.filter_by(is_active=True).order_by(MenuCategory.sort_order).all()
     items = MenuItem.query.filter_by(is_active=True, is_available=True).all()
     rooms = Room.query.filter_by(is_active=True).order_by(Room.number).all()
@@ -87,6 +87,10 @@ def manual_add():
         if table_id:
             table_id = int(table_id)
             source = "TABLE"
+        email = (request.form.get("customer_email") or "").strip()
+        if not email or "@" not in email:
+            flash("Customer email is required (Gmail/any email).", "danger")
+            return render_template("orders/manual.html", categories=categories, items=items, rooms=rooms, tables=tables)
         item_ids = request.form.getlist("item_id")
         qtys = request.form.getlist("qty")
         items_data = []
@@ -97,18 +101,42 @@ def manual_add():
             flash("Select at least one item.", "danger")
             return render_template("orders/manual.html", categories=categories, items=items, rooms=rooms, tables=tables)
         try:
+            from app.services.folio_service import get_or_open_folio
+            folio = get_or_open_folio(
+                source=source,
+                room_id=room_id,
+                table_id=table_id,
+                customer_name=request.form.get("customer_name"),
+                user_id=current_user.id,
+            )
             order = create_order(
                 source=source,
                 items_data=items_data,
                 room_id=room_id,
                 table_id=table_id,
                 customer_name=request.form.get("customer_name"),
+                customer_email=email,
                 special_instructions=request.form.get("notes"),
                 created_by_id=current_user.id,
+                folio_id=folio.id,
             )
             log_activity("manual_order", module="orders", record_id=order.id)
-            flash(f"Order {order.order_number} created.", "success")
-            return redirect(url_for("orders.detail", oid=order.id))
+            # Push + email hooks
+            try:
+                from app.services.push_service import notify_roles
+                notify_roles(
+                    ["kitchen", "admin", "staff", "super_admin"],
+                    title="🔔 New Order",
+                    body=f"{order.order_number} · Rs. {order.total}",
+                    url=f"/orders/{order.id}",
+                    tag="order-new",
+                )
+            except Exception:
+                pass
+            flash(f"Order {order.order_number} created and added to billing folio.", "success")
+            return redirect(url_for("billing.list_bills") if source == "COUNTER" else url_for("orders.detail", oid=order.id))
         except ValueError as e:
             flash(str(e), "danger")
+        except Exception as e:
+            flash(f"Order failed: {e}", "danger")
     return render_template("orders/manual.html", categories=categories, items=items, rooms=rooms, tables=tables)

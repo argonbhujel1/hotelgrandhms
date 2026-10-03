@@ -123,6 +123,20 @@ def _place_order(token):
                 items_html=items_html,
             )
             from app.services.email_service import notify_admin
+            try:
+                from app.services.push_service import notify_roles
+                roles = ["kitchen", "admin", "super_admin", "staff"]
+                if source == "ROOM":
+                    roles.append("reception")
+                notify_roles(
+                    roles,
+                    "🔔 New Room Order" if source == "ROOM" else "🔔 New Order",
+                    f"{order.order_number} · Rs. {order.total}",
+                    url=f"/orders/{order.id}",
+                    tag=f"order-{order.id}",
+                )
+            except Exception:
+                pass
             notify_admin(
                 "admin_new_order",
                 order_number=order.order_number,

@@ -27,6 +27,7 @@ class MenuItem(db.Model):
     show_on_website = db.Column(db.Boolean, default=True)
     show_on_qr = db.Column(db.Boolean, default=True)
     sort_order = db.Column(db.Integer, default=0)
+    prep_time_minutes = db.Column(db.Integer)  # estimated make time
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     updated_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     created_at = db.Column(db.DateTime, default=npt_now_naive)

@@ -516,3 +516,92 @@ def review_overtime(oid):
         notify(staff, f"overtime_{status}", date=str(ot.ot_date), hours=str(ot.hours), status=status)
         flash(f"Overtime {status}.", "success")
     return redirect(request.referrer or url_for("staff.list_staff"))
+
+
+@staff_bp.route("/attendance/report")
+@login_required
+@permission_required("staff.view")
+def attendance_report():
+    """Admin: overall staff attendance with date range, print & email."""
+    from datetime import timedelta
+    from app.models.staff_hr import Attendance
+    start_s = request.args.get("start") or ""
+    end_s = request.args.get("end") or ""
+    today = date.today()
+    try:
+        start = date.fromisoformat(start_s) if start_s else today.replace(day=1)
+    except ValueError:
+        start = today.replace(day=1)
+    try:
+        end = date.fromisoformat(end_s) if end_s else today
+    except ValueError:
+        end = today
+    users = User.query.filter_by(is_active=True).order_by(User.full_name).all()
+    records = (
+        Attendance.query.filter(Attendance.date >= start, Attendance.date <= end)
+        .order_by(Attendance.date.desc(), Attendance.user_id)
+        .all()
+    )
+    by_user = {}
+    for r in records:
+        by_user.setdefault(r.user_id, []).append(r)
+    return render_template(
+        "staff/attendance_report.html",
+        users=users,
+        records=records,
+        by_user=by_user,
+        start=start,
+        end=end,
+    )
+
+
+@staff_bp.route("/attendance/report/mail", methods=["POST"])
+@login_required
+@permission_required("staff.view")
+def attendance_report_mail():
+    from app.models.staff_hr import Attendance
+    from app.services.email_service import notify_admin
+    start_s = request.form.get("start") or ""
+    end_s = request.form.get("end") or ""
+    today = date.today()
+    try:
+        start = date.fromisoformat(start_s) if start_s else today.replace(day=1)
+    except ValueError:
+        start = today.replace(day=1)
+    try:
+        end = date.fromisoformat(end_s) if end_s else today
+    except ValueError:
+        end = today
+    records = (
+        Attendance.query.filter(Attendance.date >= start, Attendance.date <= end)
+        .order_by(Attendance.date, Attendance.user_id)
+        .all()
+    )
+    users = {u.id: u for u in User.query.all()}
+    rows = []
+    for r in records:
+        u = users.get(r.user_id)
+        name = u.full_name if u else f"#{r.user_id}"
+        cin = r.check_in.strftime("%H:%M") if r.check_in else "—"
+        cout = r.check_out.strftime("%H:%M") if r.check_out else "—"
+        rows.append(f"<tr><td>{r.date}</td><td>{name}</td><td>{cin}</td><td>{cout}</td><td>{r.presence_minutes or 0}</td><td>{r.status}</td></tr>")
+    html = (
+        f"<h2>Staff Attendance {start} → {end}</h2>"
+        f"<table border='1' cellpadding='6' cellspacing='0'>"
+        f"<thead><tr><th>Date</th><th>Staff</th><th>In</th><th>Out</th><th>Minutes</th><th>Status</th></tr></thead>"
+        f"<tbody>{''.join(rows) or '<tr><td colspan=6>No records</td></tr>'}</tbody></table>"
+    )
+    try:
+        from app.services.email_service import send_email, get_admin_emails
+        subject = f"Attendance report {start} to {end}"
+        ok = False
+        for email in get_admin_emails() or []:
+            if send_email(email, subject, html, f"Attendance {start} to {end}"):
+                ok = True
+        if ok:
+            flash("Attendance report emailed to admin.", "success")
+        else:
+            flash("No admin email configured or mail failed (check MAIL_* settings).", "warning")
+    except Exception as e:
+        flash(f"Could not email report: {e}", "danger")
+    return redirect(url_for("staff.attendance_report", start=str(start), end=str(end)))

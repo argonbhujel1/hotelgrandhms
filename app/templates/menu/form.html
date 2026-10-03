@@ -21,6 +21,7 @@
         <div style="margin-top:.5rem"><img src="{{ url_for('static', filename=item.image_path) }}" alt="" style="max-height:80px;border-radius:8px"></div>
         {% endif %}
       </div>
+      <div class="form-group"><label>Prep time (minutes)</label><input name="prep_time_minutes" type="number" min="0" value="{{ item.prep_time_minutes if item and item.prep_time_minutes is not none else '' }}" placeholder="e.g. 15"></div>
       <div class="form-group"><label>Sort Order</label><input name="sort_order" type="number" value="{{ item.sort_order if item else 0 }}"></div>
       <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin:1rem 0">
         <label><input type="checkbox" name="is_available" value="1" {% if not item or item.is_available %}checked{% endif %}> Available</label>

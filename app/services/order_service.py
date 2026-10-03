@@ -120,4 +120,37 @@ def change_order_status(order, new_status, user_id=None, note=None):
         )
     )
     db.session.commit()
+    # Web push by role
+    try:
+        from app.services.push_service import notify_roles, notify_customer_email
+        title_map = {
+            "ACCEPTED": ("🔔 Order Accepted", ["staff", "admin", "super_admin", "kitchen"]),
+            "PREPARING": ("🔔 Preparing", ["staff", "kitchen", "admin", "super_admin"]),
+            "READY": ("🔔 Ready", ["staff", "kitchen", "reception", "admin", "super_admin"]),
+            "DELIVERED": ("🔔 Served", ["staff", "admin", "super_admin"]),
+            "COMPLETED": ("🔔 Bill/Payment update", ["reception", "admin", "super_admin", "cashier"]),
+            "CANCELLED": ("🔔 Order Cancelled", ["kitchen", "staff", "admin", "super_admin"]),
+        }
+        if new_status in title_map:
+            title, roles = title_map[new_status]
+            body = f"{order.order_number} · Rs. {order.total}"
+            notify_roles(roles, title, body, url=f"/orders/{order.id}", tag=f"order-{order.id}-{new_status}")
+            if order.customer_email:
+                notify_customer_email(
+                    order.customer_email,
+                    title,
+                    body,
+                    url="/",
+                    tag=f"cust-{order.id}-{new_status}",
+                )
+        if new_status == "NEW" or (note and "special" in (note or "").lower()):
+            notify_roles(
+                ["kitchen", "staff", "admin", "super_admin"],
+                "🔔 Special Request" if note else "🔔 New Order",
+                f"{order.order_number}",
+                url=f"/orders/{order.id}",
+                tag=f"order-{order.id}",
+            )
+    except Exception:
+        pass
     return order

@@ -43,11 +43,17 @@ def add_item():
             return render_template("menu/form.html", item=None, categories=categories)
         cat_raw = request.form.get("category_id") or ""
         category_id = int(cat_raw) if cat_raw.isdigit() else None
+        prep = request.form.get("prep_time_minutes")
+        try:
+            prep = int(prep) if prep not in (None, "") else None
+        except (TypeError, ValueError):
+            prep = None
         item = MenuItem(
             name=name,
             category_id=category_id,
             description=request.form.get("description"),
             price=_parse_price(request.form.get("price")),
+            prep_time_minutes=prep,
             is_available=request.form.get("is_available") in ("1", "on", "true", "True"),
             show_on_website=request.form.get("show_on_website") in ("1", "on", "true", "True"),
             show_on_qr=request.form.get("show_on_qr") in ("1", "on", "true", "True"),
@@ -91,6 +97,11 @@ def edit_item(item_id):
         item.category_id = int(cat_raw) if cat_raw.isdigit() else None
         item.description = request.form.get("description")
         item.price = _parse_price(request.form.get("price") or item.price)
+        try:
+            pt = request.form.get("prep_time_minutes")
+            item.prep_time_minutes = int(pt) if pt not in (None, "") else None
+        except (TypeError, ValueError):
+            pass
         item.is_available = request.form.get("is_available") in ("1", "on", "true", "True")
         item.show_on_website = request.form.get("show_on_website") in ("1", "on", "true", "True")
         item.show_on_qr = request.form.get("show_on_qr") in ("1", "on", "true", "True")
@@ -133,3 +144,52 @@ def add_category():
         db.session.commit()
         flash("Category added.", "success")
     return redirect(url_for("menu.categories"))
+
+
+@menu_bp.route("/bulk", methods=["GET", "POST"])
+@login_required
+@permission_required("menu.add")
+def bulk_add():
+    """Add multiple menu items at once (no image). Image only on edit."""
+    categories = MenuCategory.query.filter_by(is_active=True).order_by(MenuCategory.sort_order).all()
+    if request.method == "POST":
+        cat_raw = request.form.get("category_id") or ""
+        category_id = int(cat_raw) if cat_raw.isdigit() else None
+        if not category_id:
+            flash("Select a category.", "danger")
+            return render_template("menu/bulk.html", categories=categories)
+        names = request.form.getlist("names[]") or request.form.getlist("names")
+        prices = request.form.getlist("prices[]") or request.form.getlist("prices")
+        preps = request.form.getlist("prep_times[]") or request.form.getlist("prep_times")
+        added = 0
+        for i, name in enumerate(names):
+            name = (name or "").strip()
+            if not name:
+                continue
+            price = _parse_price(prices[i] if i < len(prices) else 0)
+            prep = None
+            try:
+                if i < len(preps) and preps[i] not in (None, ""):
+                    prep = int(preps[i])
+            except (TypeError, ValueError):
+                prep = None
+            db.session.add(MenuItem(
+                name=name,
+                category_id=category_id,
+                price=price,
+                prep_time_minutes=prep,
+                is_available=True,
+                show_on_website=True,
+                show_on_qr=True,
+                is_active=True,
+                created_by_id=current_user.id,
+            ))
+            added += 1
+        if added:
+            db.session.commit()
+            log_activity("bulk_menu_add", module="menu", details=f"{added} items")
+            flash(f"{added} item(s) added. Add photos from Edit.", "success")
+        else:
+            flash("No items added.", "danger")
+        return redirect(url_for("menu.list_items"))
+    return render_template("menu/bulk.html", categories=categories)

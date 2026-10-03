@@ -21,3 +21,4 @@ bleach==6.1.0
 python-dateutil==2.9.0
 qrcode[pil]==7.4.2
 cloudinary==1.41.0
+pywebpush==2.0.1

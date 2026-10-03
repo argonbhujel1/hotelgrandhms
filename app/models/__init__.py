@@ -7,6 +7,7 @@ from app.models.order import Order, OrderItem, OrderStatusHistory
 from app.models.billing import Bill, Payment, PaymentMethod
 from app.models.folio import Folio, FolioCharge
 from app.models.settings import BusinessSettings, TaxSettings, POSSettings, WorkingHoursSettings
+from app.models.push import PushSubscription
 from app.models.staff_hr import (
     StaffSalaryProfile, SalaryIncrement, SalaryRecord, SalaryDeduction,
     StaffConsumption, Fine, SalaryAdvance, SalaryPayment,
@@ -26,4 +27,5 @@ __all__ = [
     "StaffSalaryProfile", "SalaryIncrement", "SalaryRecord", "SalaryDeduction",
     "StaffConsumption", "Fine", "SalaryAdvance", "SalaryPayment",
     "Attendance", "LeaveRequest", "BreakRequest", "OvertimeRequest", "LeaveType",
+    "PushSubscription",
 ]
