@@ -58,20 +58,20 @@ def create_app(config_name=None):
         static_folder="static",
         instance_relative_config=True,
     )
-    app.config.from_object(config_by_name.get(config_name, config_by_name["default"]))
+    flask_app.config.from_object(config_by_name.get(config_name, config_by_name["default"]))
 
     # Ensure upload dirs (never crash on read-only FS like Vercel)
     try:
-        os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+        os.makedirs(flask_app.config["UPLOAD_FOLDER"], exist_ok=True)
         for sub in ("rooms", "menu", "qr", "logos", "signatures"):
-            os.makedirs(os.path.join(app.config["UPLOAD_FOLDER"], sub), exist_ok=True)
+            os.makedirs(os.path.join(flask_app.config["UPLOAD_FOLDER"], sub), exist_ok=True)
     except OSError:
         # Vercel / serverless: use /tmp
-        app.config["UPLOAD_FOLDER"] = "/tmp/hotel_hms_uploads"
+        flask_app.config["UPLOAD_FOLDER"] = "/tmp/hotel_hms_uploads"
         try:
-            os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+            os.makedirs(flask_app.config["UPLOAD_FOLDER"], exist_ok=True)
             for sub in ("rooms", "menu", "qr", "logos", "signatures"):
-                os.makedirs(os.path.join(app.config["UPLOAD_FOLDER"], sub), exist_ok=True)
+                os.makedirs(os.path.join(flask_app.config["UPLOAD_FOLDER"], sub), exist_ok=True)
         except OSError:
             pass
 
