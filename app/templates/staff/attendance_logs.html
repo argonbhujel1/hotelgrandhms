@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Attendance Logs{% endblock %}
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1rem">
+  <div>
+    <h2 style="margin:0">Attendance location logs</h2>
+    <p style="color:var(--muted);margin:.25rem 0 0">
+      Hotel pin: {% if hotel_lat is not none %}{{ '%.6f'|format(hotel_lat) }}, {{ '%.6f'|format(hotel_lng) }} · radius {{ radius_m }} m{% else %}<em>Not set — configure in Settings</em>{% endif %}
+      · NPT {{ npt_now.strftime('%d/%m/%Y %H:%M') if npt_now else '' }}
+    </p>
+  </div>
+  <a href="{{ url_for('staff.attendance_report') }}" class="btn btn-outline">Staff Attendance</a>
+</div>
+<form method="get" class="panel" style="margin-bottom:1rem">
+  <div class="panel-body" style="display:flex;gap:.75rem;flex-wrap:wrap;align-items:flex-end">
+    <div class="form-group" style="margin:0;min-width:220px">
+      <label>Staff name</label>
+      <select name="staff_id">
+        <option value="">All staff (recent logs)</option>
+        {% for u in users %}
+        <option value="{{ u.id }}" {% if staff_id == u.id %}selected{% endif %}>{{ u.full_name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Show</button>
+  </div>
+</form>
+<div class="panel">
+  <div class="panel-header">{% if staff_id %}Selected staff{% else %}Recent logs{% endif %} · {{ logs|length }}</div>
+  <div class="panel-body table-wrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>Time (NPT)</th>
+          <th>Staff</th>
+          <th>Action</th>
+          <th>Result</th>
+          <th>Distance</th>
+          <th>Location</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for log in logs %}
+        {% set u = user_map.get(log.user_id) %}
+        <tr>
+          <td>{{ log.created_at.strftime('%d/%m/%Y %H:%M:%S') if log.created_at else '—' }}</td>
+          <td>{{ u.full_name if u else log.user_id }}</td>
+          <td>
+            {% if log.action == 'check_in' %}Check-in
+            {% elif log.action == 'check_in_try' %}Check-in try
+            {% elif log.action == 'check_out' %}Check-out
+            {% elif log.action == 'check_out_try' %}Check-out try
+            {% else %}{{ log.action }}{% endif %}
+          </td>
+          <td>{% if log.success %}<span style="color:var(--success)">OK</span>{% else %}<span style="color:var(--danger)">Blocked</span>{% endif %}</td>
+          <td>{% if log.distance_m is not none %}{{ '%.0f'|format(log.distance_m) }} m{% else %}—{% endif %}</td>
+          <td style="font-size:.8rem">
+            {% if log.latitude is not none %}
+            <a href="https://maps.google.com/?q={{ log.latitude }},{{ log.longitude }}" target="_blank" rel="noopener">{{ '%.5f'|format(log.latitude) }}, {{ '%.5f'|format(log.longitude) }}</a>
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ log.message or '—' }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7">No logs yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

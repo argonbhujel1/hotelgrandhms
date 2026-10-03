@@ -1,56 +1,123 @@
 {% extends "base.html" %}
-{% block title %}Attendance Report{% endblock %}
+{% block title %}Staff Attendance{% endblock %}
 {% block head %}
 <style>
 @media print {
-  .no-print, .sidebar, .topbar, .app-shell > aside, nav, .brand { display: none !important; }
-  .app-shell, .main, .content { display:block !important; margin:0 !important; padding:0 !important; width:100% !important; }
-  body { background:#fff; }
+  .no-print, .sidebar, .topbar, .bottom-nav, .menu-toggle, .alerts { display: none !important; }
+  .app-shell, .main, .content { display: block !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+  body { background: #fff; }
+  .panel { box-shadow: none; border: 1px solid #ccc; }
+}
+.att-filters { display: flex; flex-wrap: wrap; gap: .75rem; align-items: flex-end; }
+.att-filters .form-group { margin: 0; min-width: 140px; }
+.att-filters label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: .25rem; }
+.att-filters input, .att-filters select {
+  padding: .45rem .6rem; border: 1px solid var(--border); border-radius: 8px; width: 100%;
 }
 </style>
 {% endblock %}
 {% block content %}
 <div class="no-print" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1rem">
   <div>
-    <h2 style="margin:0">Staff Attendance Report</h2>
-    <p style="color:var(--muted);margin:.25rem 0 0">Overall attendance for all staff</p>
+    <h2 style="margin:0">Staff Attendance</h2>
+    <p style="color:var(--muted);margin:.25rem 0 0">Nepal calendar (Kathmandu) · Now {{ npt_now.strftime('%d/%m/%Y %H:%M') if npt_now else '' }} NPT</p>
   </div>
   <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-    <button type="button" class="btn btn-outline" onclick="window.print()">Print</button>
+    <button type="button" class="btn btn-outline" onclick="window.print()">🖨 Print</button>
     <form method="post" action="{{ url_for('staff.attendance_report_mail') }}" style="display:inline">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input type="hidden" name="start" value="{{ start }}">
-      <input type="hidden" name="end" value="{{ end }}">
+      <input type="hidden" name="staff_id" value="{{ staff_id or '' }}">
+      <input type="hidden" name="year" value="{{ year }}">
+      <input type="hidden" name="month" value="{{ month }}">
+      <input type="hidden" name="day" value="{{ day_s }}">
       <button type="submit" class="btn btn-primary">Email report</button>
     </form>
   </div>
 </div>
+
 <form method="get" class="no-print panel" style="margin-bottom:1rem">
-  <div class="panel-body" style="display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end">
-    <div class="form-group" style="margin:0"><label>From</label><input type="date" name="start" value="{{ start }}"></div>
-    <div class="form-group" style="margin:0"><label>To</label><input type="date" name="end" value="{{ end }}"></div>
-    <button type="submit" class="btn btn-outline">Filter</button>
+  <div class="panel-body att-filters">
+    <div class="form-group" style="min-width:200px">
+      <label>Staff name</label>
+      <select name="staff_id">
+        <option value="">All staff</option>
+        {% for u in users %}
+        <option value="{{ u.id }}" {% if staff_id == u.id %}selected{% endif %}>{{ u.full_name }}{% if u.role %} ({{ u.role.name }}){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Month</label>
+      <select name="month">
+        {% for m in months %}
+        <option value="{{ m }}" {% if month == m %}selected{% endif %}>{{ month_names[m] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Year</label>
+      <select name="year">
+        {% for y in years %}
+        <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group" style="min-width:160px">
+      <label>Specific day (dd/mm/yyyy)</label>
+      <input type="text" name="day" value="{{ day_s }}" placeholder="e.g. 04/10/2026" inputmode="numeric">
+    </div>
+    <button type="submit" class="btn btn-primary">Show</button>
+    <a href="{{ url_for('staff.attendance_report') }}" class="btn btn-outline">Reset</a>
   </div>
+  <p class="panel-body" style="padding-top:0;color:var(--muted);font-size:.85rem;margin:0">
+    Month/Year = whole month · Specific day overrides month filter · Dates are Nepal (NPT)
+  </p>
 </form>
-<div class="panel">
-  <div class="panel-header">{{ start }} → {{ end }} · {{ records|length }} records</div>
+
+<div class="panel" style="margin-bottom:1rem">
+  <div class="panel-header">
+    {% if mode == 'day' %}
+      Day {{ start.strftime('%d/%m/%Y') }}
+    {% else %}
+      {{ month_names[month] }} {{ year }}
+    {% endif %}
+    · {{ records|length }} record(s)
+  </div>
+  {% if summary %}
+  <div class="panel-body" style="border-bottom:1px solid var(--border)">
+    <strong>Summary</strong>
+    <ul style="margin:.5rem 0 0;padding-left:1.2rem">
+      {% for uid, s in summary.items() %}
+      <li>{{ s.name }} — {{ s.days }} day(s), {{ s.minutes }} min</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
   <div class="panel-body table-wrap">
     <table class="data">
-      <thead><tr><th>Date</th><th>Staff</th><th>In</th><th>Out</th><th>Minutes</th><th>OT</th><th>Status</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Date (dd/mm/yyyy)</th>
+          <th>Staff</th>
+          <th>In (NPT)</th>
+          <th>Out (NPT)</th>
+          <th>Minutes</th>
+          <th>Status</th>
+        </tr>
+      </thead>
       <tbody>
       {% for r in records %}
-        {% set u = users|selectattr('id','equalto',r.user_id)|first %}
+        {% set u = all_users|selectattr('id','equalto',r.user_id)|first %}
         <tr>
-          <td>{{ r.date }}</td>
+          <td>{{ r.date.strftime('%d/%m/%Y') if r.date else '—' }}</td>
           <td>{{ u.full_name if u else r.user_id }}</td>
-          <td>{{ r.check_in | format_npt('%H:%M') if r.check_in else '—' }}</td>
-          <td>{{ r.check_out | format_npt('%H:%M') if r.check_out else '—' }}</td>
+          <td>{{ r.check_in.strftime('%H:%M') if r.check_in else '—' }}</td>
+          <td>{{ r.check_out.strftime('%H:%M') if r.check_out else '—' }}</td>
           <td>{{ r.presence_minutes or 0 }}</td>
-          <td>{{ r.overtime_minutes or 0 }}</td>
           <td>{{ r.status }}</td>
         </tr>
       {% else %}
-        <tr><td colspan="7">No attendance in this range.</td></tr>
+        <tr><td colspan="6">No attendance in this period.</td></tr>
       {% endfor %}
       </tbody>
     </table>

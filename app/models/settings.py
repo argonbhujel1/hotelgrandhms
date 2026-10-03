@@ -21,6 +21,10 @@ class BusinessSettings(db.Model):
     favicon_path = db.Column(db.String(255))
     signature_path = db.Column(db.String(255))
     prepared_by_text = db.Column(db.Text, default="HOTEL GRAND GARDEN\nFamily Restaurant & Bar")
+    # Geofence for staff attendance (Nepal)
+    attendance_lat = db.Column(db.Float)  # hotel latitude
+    attendance_lng = db.Column(db.Float)  # hotel longitude
+    attendance_radius_m = db.Column(db.Integer, default=200)  # meters
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     @classmethod

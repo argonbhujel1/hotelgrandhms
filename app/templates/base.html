@@ -78,6 +78,10 @@
       {% if current_user.has_permission('staff.view') %}
       <a href="{{ url_for('staff.list_staff') }}">Staff</a>
       {% endif %}
+      {% if current_user.has_permission('staff.view') %}
+      <a href="{{ url_for('staff.attendance_report') }}">Staff Attendance</a>
+      <a href="{{ url_for('staff.attendance_logs') }}">Attendance Logs</a>
+      {% endif %}
       <a href="{{ url_for('staff.my_attendance') }}">My Attendance</a>
       <a href="{{ url_for('staff.request_leave') }}">Leave</a>
       <a href="{{ url_for('staff.request_overtime') }}">Overtime</a>

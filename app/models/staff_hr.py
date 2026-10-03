@@ -113,7 +113,11 @@ class StaffConsumption(db.Model):
     note = db.Column(db.Text)
     consumption_date = db.Column(db.Date, default=date.today)
     deduction_month = db.Column(db.Date)
-    status = db.Column(db.String(20), default="pending")  # pending, approved, rejected
+    status = db.Column(db.String(20), default="pending")  # pending, checked_in, working, checked_out, approved, rejected
+    check_in_lat = db.Column(db.Float)
+    check_in_lng = db.Column(db.Float)
+    check_out_lat = db.Column(db.Float)
+    check_out_lng = db.Column(db.Float)
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     reviewed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=npt_now_naive)
@@ -231,3 +235,21 @@ class OvertimeRequest(db.Model):
     status = db.Column(db.String(20), default="pending")
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     created_at = db.Column(db.DateTime, default=npt_now_naive)
+
+
+
+class AttendanceLog(db.Model):
+    """Every check-in / check-out attempt (success or outside radius)."""
+    __tablename__ = "attendance_logs"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    action = db.Column(db.String(30), nullable=False, index=True)
+    # check_in, check_in_try, check_out, check_out_try
+    success = db.Column(db.Boolean, default=False)
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    distance_m = db.Column(db.Float)  # distance from hotel geofence center
+    message = db.Column(db.String(255))
+    created_at = db.Column(db.DateTime, default=npt_now_naive, index=True)
+
+    user = db.relationship("User", backref=db.backref("attendance_logs", lazy="dynamic"))

@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from app import db
 from app.models.user import User, Role, Permission, RolePermission, StaffPermission, StaffSession
-from app.models.staff_hr import StaffSalaryProfile, Attendance, LeaveRequest, BreakRequest, OvertimeRequest
+from app.models.staff_hr import StaffSalaryProfile, Attendance, AttendanceLog, LeaveRequest, BreakRequest, OvertimeRequest
 from app.utils.decorators import permission_required
 from app.utils.audit import log_activity, log_audit
 from app.services.email_service import notify
@@ -175,40 +175,152 @@ def force_logout(sid):
     return redirect(url_for("staff.live_sessions"))
 
 
+
 @staff_bp.route("/attendance", methods=["GET", "POST"])
 @login_required
 def my_attendance():
-    """Check-in / check-out using Nepal (Kathmandu) calendar day & wall-clock time."""
-    today = now_npt().date()  # Nepal date, not server UTC
+    """Check-in / check-out with hotel geofence (default 200m). Nepal time."""
+    import math
+    from app.models.settings import BusinessSettings
+    from app.services.email_service import send_email, get_admin_emails
+
+    today = now_npt().date()
+    bs = BusinessSettings.get_settings()
+    hotel_lat = getattr(bs, "attendance_lat", None)
+    hotel_lng = getattr(bs, "attendance_lng", None)
+    radius = getattr(bs, "attendance_radius_m", None) or 200
+
+    def haversine_m(lat1, lon1, lat2, lon2):
+        R = 6371000.0
+        p1, p2 = math.radians(lat1), math.radians(lat2)
+        dphi = math.radians(lat2 - lat1)
+        dl = math.radians(lon2 - lon1)
+        a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+        return 2 * R * math.asin(math.sqrt(a))
+
+    def log_attempt(action, success, lat, lng, dist, message):
+        db.session.add(AttendanceLog(
+            user_id=current_user.id,
+            action=action,
+            success=success,
+            latitude=lat,
+            longitude=lng,
+            distance_m=dist,
+            message=message,
+            created_at=npt_now_naive(),
+        ))
+
+    def notify_outside(action, lat, lng, dist):
+        try:
+            name = current_user.full_name
+            subj = f"[HMS] Outside geofence: {name} {action}"
+            body = (
+                f"<p><strong>{name}</strong> tried <strong>{action}</strong> outside the hotel radius.</p>"
+                f"<p>Distance: <strong>{dist:.0f} m</strong> (allowed {radius} m)</p>"
+                f"<p>Location: {lat:.6f}, {lng:.6f}</p>"
+                f"<p>Time (NPT): {npt_now_naive().strftime('%d/%m/%Y %H:%M')}</p>"
+            )
+            for email in get_admin_emails() or []:
+                send_email(email, subj, body, subj)
+            if current_user.email:
+                send_email(
+                    current_user.email,
+                    "Check-in/out blocked — outside hotel area",
+                    f"<p>Your {action} was blocked because you are about {dist:.0f} m from the hotel "
+                    f"(allowed {radius} m). Please try again at the hotel.</p>",
+                    "Outside hotel geofence",
+                )
+        except Exception:
+            pass
+
     if request.method == "POST":
         action = request.form.get("action")
+        try:
+            lat = float(request.form.get("latitude") or "")
+            lng = float(request.form.get("longitude") or "")
+        except (TypeError, ValueError):
+            lat = lng = None
+
+        geo_configured = hotel_lat is not None and hotel_lng is not None
+        dist = None
+        if geo_configured and lat is not None and lng is not None:
+            dist = haversine_m(float(hotel_lat), float(hotel_lng), lat, lng)
+        elif geo_configured and (lat is None or lng is None):
+            flash("Location permission required for check-in/out. Allow GPS and try again.", "danger")
+            log_attempt(
+                "check_in_try" if action == "check_in" else "check_out_try",
+                False, None, None, None, "Location not provided",
+            )
+            db.session.commit()
+            return redirect(url_for("staff.my_attendance"))
+
+        outside = geo_configured and dist is not None and dist > float(radius)
+
         att = Attendance.query.filter_by(user_id=current_user.id, date=today).first()
         if action == "check_in":
-            if att and att.check_in:
-                flash("Already checked in today (Nepal time).", "warning")
+            if outside:
+                log_attempt("check_in_try", False, lat, lng, dist, f"Outside radius ({dist:.0f}m)")
+                db.session.commit()
+                notify_outside("check-in", lat, lng, dist)
+                flash(f"Check-in blocked: you are {dist:.0f} m away (max {radius} m). Admin notified.", "danger")
+            elif att and att.check_in:
+                flash("Already checked in today.", "warning")
             else:
                 if not att:
-                    att = Attendance(user_id=current_user.id, date=today, status="pending")
+                    att = Attendance(user_id=current_user.id, date=today)
                     db.session.add(att)
                 att.check_in = npt_now_naive()
+                att.status = "checked_in"
+                att.check_in_lat = lat
+                att.check_in_lng = lng
+                log_attempt("check_in", True, lat, lng, dist, "OK")
                 db.session.commit()
-                flash(f"Checked in at {att.check_in.strftime('%H:%M')} (Nepal time).", "success")
+                flash(f"Checked in at {att.check_in.strftime('%H:%M')} NPT · Working", "success")
         elif action == "check_out" and att and att.check_in and not att.check_out:
-            att.check_out = npt_now_naive()
-            delta = att.check_out - att.check_in
-            att.presence_minutes = int(delta.total_seconds() // 60)
-            att.worked_minutes = att.presence_minutes
-            db.session.commit()
-            flash(f"Checked out at {att.check_out.strftime('%H:%M')} (Nepal time).", "success")
+            if outside:
+                log_attempt("check_out_try", False, lat, lng, dist, f"Outside radius ({dist:.0f}m)")
+                db.session.commit()
+                notify_outside("check-out", lat, lng, dist)
+                flash(f"Check-out blocked: you are {dist:.0f} m away (max {radius} m). Admin notified.", "danger")
+            else:
+                att.check_out = npt_now_naive()
+                att.status = "checked_out"
+                att.check_out_lat = lat
+                att.check_out_lng = lng
+                delta = att.check_out - att.check_in
+                att.presence_minutes = int(delta.total_seconds() // 60)
+                att.worked_minutes = att.presence_minutes
+                log_attempt("check_out", True, lat, lng, dist, "OK")
+                db.session.commit()
+                flash(f"Checked out at {att.check_out.strftime('%H:%M')} NPT", "success")
+        elif action == "check_out":
+            flash("No active check-in to check out.", "warning")
         return redirect(url_for("staff.my_attendance"))
+
     records = Attendance.query.filter_by(user_id=current_user.id).order_by(Attendance.date.desc()).limit(30).all()
     today_att = Attendance.query.filter_by(user_id=current_user.id, date=today).first()
+    # auto status label for display
+    status_label = None
+    if today_att and today_att.check_in and not today_att.check_out:
+        status_label = "Working"
+        if today_att.status not in ("checked_in", "working"):
+            today_att.status = "working"
+            try:
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+    elif today_att and today_att.check_out:
+        status_label = "Checked out"
+
     return render_template(
         "staff/attendance.html",
         records=records,
         today_att=today_att,
         npt_now=now_npt(),
         npt_today=today,
+        status_label=status_label,
+        geo_required=bool(hotel_lat is not None and hotel_lng is not None),
+        radius_m=radius,
     )
 
 
@@ -526,40 +638,111 @@ def review_overtime(oid):
     return redirect(request.referrer or url_for("staff.list_staff"))
 
 
+
+
+@staff_bp.route("/attendance/logs")
+@login_required
+@permission_required("staff.view")
+def attendance_logs():
+    """Admin: location attempts — check-in/out success & blocked tries."""
+    staff_id = request.args.get("staff_id", type=int)
+    users = User.query.order_by(User.full_name).all()
+    q = AttendanceLog.query
+    if staff_id:
+        q = q.filter_by(user_id=staff_id)
+    logs = q.order_by(AttendanceLog.created_at.desc()).limit(200).all()
+    user_map = {u.id: u for u in users}
+    from app.models.settings import BusinessSettings
+    bs = BusinessSettings.get_settings()
+    return render_template(
+        "staff/attendance_logs.html",
+        logs=logs,
+        users=users,
+        staff_id=staff_id,
+        user_map=user_map,
+        hotel_lat=getattr(bs, "attendance_lat", None),
+        hotel_lng=getattr(bs, "attendance_lng", None),
+        radius_m=getattr(bs, "attendance_radius_m", None) or 200,
+        npt_now=now_npt(),
+    )
+
+
 @staff_bp.route("/attendance/report")
 @login_required
 @permission_required("staff.view")
 def attendance_report():
-    """Admin: overall staff attendance with date range, print & email."""
-    from datetime import timedelta
+    """Admin: Staff Attendance — filter by staff, month/year, or specific day (Nepal calendar)."""
+    from calendar import monthrange
     from app.models.staff_hr import Attendance
-    start_s = request.args.get("start") or ""
-    end_s = request.args.get("end") or ""
-    today = date.today()
-    try:
-        start = date.fromisoformat(start_s) if start_s else today.replace(day=1)
-    except ValueError:
-        start = today.replace(day=1)
-    try:
-        end = date.fromisoformat(end_s) if end_s else today
-    except ValueError:
-        end = today
+    from app.utils.timeutil import now_npt
+
     users = User.query.filter_by(is_active=True).order_by(User.full_name).all()
-    records = (
-        Attendance.query.filter(Attendance.date >= start, Attendance.date <= end)
-        .order_by(Attendance.date.desc(), Attendance.user_id)
-        .all()
-    )
-    by_user = {}
+    # also include inactive if they have records
+    all_users = User.query.order_by(User.full_name).all()
+
+    npt = now_npt()
+    staff_id = request.args.get("staff_id", type=int)
+    year = request.args.get("year", type=int) or npt.year
+    month = request.args.get("month", type=int) or npt.month
+    day_s = (request.args.get("day") or "").strip()  # dd/mm/yyyy
+
+    specific_day = None
+    if day_s:
+        for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d"):
+            try:
+                specific_day = datetime.strptime(day_s, fmt).date()
+                break
+            except ValueError:
+                continue
+        if not specific_day:
+            flash("Invalid day format. Use dd/mm/yyyy (Nepal date).", "danger")
+
+    if specific_day:
+        start = specific_day
+        end = specific_day
+        mode = "day"
+    else:
+        last = monthrange(year, month)[1]
+        start = date(year, month, 1)
+        end = date(year, month, last)
+        mode = "month"
+
+    q = Attendance.query.filter(Attendance.date >= start, Attendance.date <= end)
+    if staff_id:
+        q = q.filter_by(user_id=staff_id)
+    records = q.order_by(Attendance.date.asc(), Attendance.user_id).all()
+
+    user_map = {u.id: u for u in all_users}
+    # summary per staff
+    summary = {}
     for r in records:
-        by_user.setdefault(r.user_id, []).append(r)
+        s = summary.setdefault(r.user_id, {"days": 0, "minutes": 0, "name": (user_map.get(r.user_id).full_name if user_map.get(r.user_id) else f"#{r.user_id}")})
+        if r.check_in:
+            s["days"] += 1
+            s["minutes"] += r.presence_minutes or 0
+
+    years = list(range(npt.year - 2, npt.year + 2))
+    months = list(range(1, 13))
+    month_names = ["", "January", "February", "March", "April", "May", "June",
+                   "July", "August", "September", "October", "November", "December"]
+
     return render_template(
         "staff/attendance_report.html",
         users=users,
+        all_users=all_users,
         records=records,
-        by_user=by_user,
+        summary=summary,
+        staff_id=staff_id,
+        year=year,
+        month=month,
+        months=months,
+        month_names=month_names,
+        years=years,
+        day_s=day_s if specific_day else "",
         start=start,
         end=end,
+        mode=mode,
+        npt_now=npt,
     )
 
 
@@ -568,48 +751,70 @@ def attendance_report():
 @permission_required("staff.view")
 def attendance_report_mail():
     from app.models.staff_hr import Attendance
-    from app.services.email_service import notify_admin
-    start_s = request.form.get("start") or ""
-    end_s = request.form.get("end") or ""
-    today = date.today()
-    try:
-        start = date.fromisoformat(start_s) if start_s else today.replace(day=1)
-    except ValueError:
-        start = today.replace(day=1)
-    try:
-        end = date.fromisoformat(end_s) if end_s else today
-    except ValueError:
-        end = today
-    records = (
-        Attendance.query.filter(Attendance.date >= start, Attendance.date <= end)
-        .order_by(Attendance.date, Attendance.user_id)
-        .all()
-    )
+    from app.services.email_service import send_email, get_admin_emails
+
+    staff_id = request.form.get("staff_id", type=int)
+    year = request.form.get("year", type=int)
+    month = request.form.get("month", type=int)
+    day_s = (request.form.get("day") or "").strip()
+
+    specific_day = None
+    if day_s:
+        for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d"):
+            try:
+                specific_day = datetime.strptime(day_s, fmt).date()
+                break
+            except ValueError:
+                continue
+
+    if specific_day:
+        start = end = specific_day
+    else:
+        from calendar import monthrange
+        from app.utils.timeutil import now_npt
+        npt = now_npt()
+        year = year or npt.year
+        month = month or npt.month
+        last = monthrange(year, month)[1]
+        start = date(year, month, 1)
+        end = date(year, month, last)
+
+    q = Attendance.query.filter(Attendance.date >= start, Attendance.date <= end)
+    if staff_id:
+        q = q.filter_by(user_id=staff_id)
+    records = q.order_by(Attendance.date, Attendance.user_id).all()
     users = {u.id: u for u in User.query.all()}
     rows = []
     for r in records:
         u = users.get(r.user_id)
         name = u.full_name if u else f"#{r.user_id}"
+        d = r.date.strftime("%d/%m/%Y") if r.date else "—"
         cin = r.check_in.strftime("%H:%M") if r.check_in else "—"
         cout = r.check_out.strftime("%H:%M") if r.check_out else "—"
-        rows.append(f"<tr><td>{r.date}</td><td>{name}</td><td>{cin}</td><td>{cout}</td><td>{r.presence_minutes or 0}</td><td>{r.status}</td></tr>")
+        rows.append(f"<tr><td>{d}</td><td>{name}</td><td>{cin}</td><td>{cout}</td><td>{r.presence_minutes or 0}</td><td>{r.status}</td></tr>")
     html = (
-        f"<h2>Staff Attendance {start} → {end}</h2>"
+        f"<h2>Staff Attendance {start.strftime('%d/%m/%Y')} → {end.strftime('%d/%m/%Y')} (Nepal)</h2>"
         f"<table border='1' cellpadding='6' cellspacing='0'>"
-        f"<thead><tr><th>Date</th><th>Staff</th><th>In</th><th>Out</th><th>Minutes</th><th>Status</th></tr></thead>"
+        f"<thead><tr><th>Date (dd/mm/yyyy)</th><th>Staff</th><th>In</th><th>Out</th><th>Minutes</th><th>Status</th></tr></thead>"
         f"<tbody>{''.join(rows) or '<tr><td colspan=6>No records</td></tr>'}</tbody></table>"
     )
     try:
-        from app.services.email_service import send_email, get_admin_emails
-        subject = f"Attendance report {start} to {end}"
+        subject = f"Attendance report {start.strftime('%d/%m/%Y')} to {end.strftime('%d/%m/%Y')}"
         ok = False
         for email in get_admin_emails() or []:
-            if send_email(email, subject, html, f"Attendance {start} to {end}"):
+            if send_email(email, subject, html, subject):
                 ok = True
         if ok:
             flash("Attendance report emailed to admin.", "success")
         else:
-            flash("No admin email configured or mail failed (check MAIL_* settings).", "warning")
+            flash("No admin email configured or mail failed.", "warning")
     except Exception as e:
         flash(f"Could not email report: {e}", "danger")
-    return redirect(url_for("staff.attendance_report", start=str(start), end=str(end)))
+    return redirect(url_for(
+        "staff.attendance_report",
+        staff_id=staff_id or "",
+        year=year or "",
+        month=month or "",
+        day=day_s or "",
+    ))
+

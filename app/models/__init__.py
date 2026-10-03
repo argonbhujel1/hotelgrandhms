@@ -11,7 +11,7 @@ from app.models.push import PushSubscription
 from app.models.staff_hr import (
     StaffSalaryProfile, SalaryIncrement, SalaryRecord, SalaryDeduction,
     StaffConsumption, Fine, SalaryAdvance, SalaryPayment,
-    Attendance, LeaveRequest, BreakRequest, OvertimeRequest, LeaveType,
+    Attendance, AttendanceLog, LeaveRequest, BreakRequest, OvertimeRequest, LeaveType,
 )
 
 __all__ = [
@@ -26,6 +26,6 @@ __all__ = [
     "BusinessSettings", "TaxSettings", "POSSettings", "WorkingHoursSettings",
     "StaffSalaryProfile", "SalaryIncrement", "SalaryRecord", "SalaryDeduction",
     "StaffConsumption", "Fine", "SalaryAdvance", "SalaryPayment",
-    "Attendance", "LeaveRequest", "BreakRequest", "OvertimeRequest", "LeaveType",
+    "Attendance", "AttendanceLog", "LeaveRequest", "BreakRequest", "OvertimeRequest", "LeaveType",
     "PushSubscription",
 ]

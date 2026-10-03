@@ -37,6 +37,18 @@ def business():
         s.check_in_time = request.form.get("check_in_time") or "12:00"
         s.check_out_time = request.form.get("check_out_time") or "11:00"
         s.prepared_by_text = request.form.get("prepared_by_text") or s.prepared_by_text
+        try:
+            lat = request.form.get("attendance_lat")
+            lng = request.form.get("attendance_lng")
+            s.attendance_lat = float(lat) if lat not in (None, "") else None
+            s.attendance_lng = float(lng) if lng not in (None, "") else None
+        except (TypeError, ValueError):
+            pass
+        try:
+            r = request.form.get("attendance_radius_m")
+            s.attendance_radius_m = int(r) if r not in (None, "") else 200
+        except (TypeError, ValueError):
+            s.attendance_radius_m = 200
 
         for field, sub in (
             ("logo", "logos"),

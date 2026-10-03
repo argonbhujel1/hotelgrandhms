@@ -17,6 +17,11 @@
       <div class="form-group"><label>Check-in Time</label><input name="check_in_time" value="{{ s.check_in_time }}"></div>
       <div class="form-group"><label>Check-out Time</label><input name="check_out_time" value="{{ s.check_out_time }}"></div>
       <div class="form-group"><label>Prepared By Text</label><textarea name="prepared_by_text" rows="3">{{ s.prepared_by_text }}</textarea></div>
+      <h3 style="margin:1.25rem 0 .5rem;font-size:1rem">Attendance geofence (Nepal)</h3>
+      <p style="color:var(--muted);font-size:.85rem;margin-bottom:.75rem">Staff can only check-in/out within this radius of the hotel pin. Outside attempts email staff + admin.</p>
+      <div class="form-group"><label>Hotel latitude</label><input name="attendance_lat" type="number" step="any" value="{{ s.attendance_lat if s.attendance_lat is not none else '' }}" placeholder="e.g. 26.6643"></div>
+      <div class="form-group"><label>Hotel longitude</label><input name="attendance_lng" type="number" step="any" value="{{ s.attendance_lng if s.attendance_lng is not none else '' }}" placeholder="e.g. 87.6335"></div>
+      <div class="form-group"><label>Radius (meters)</label><input name="attendance_radius_m" type="number" min="20" value="{{ s.attendance_radius_m or 200 }}"></div>
 
       <hr style="margin:1.25rem 0;border:none;border-top:1px solid var(--border)">
       <h3 style="font-size:1rem;margin-bottom:.75rem">Branding</h3>

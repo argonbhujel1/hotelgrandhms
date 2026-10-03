@@ -447,6 +447,14 @@ def _ensure_schema_patches():
         "ALTER TABLE staff_salary_profiles ADD COLUMN IF NOT EXISTS wallet_provider VARCHAR(50)",
         "ALTER TABLE staff_salary_profiles ADD COLUMN IF NOT EXISTS wallet_account_number VARCHAR(50)",
         "ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS prep_time_minutes INTEGER",
+        "ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS attendance_lat DOUBLE PRECISION",
+        "ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS attendance_lng DOUBLE PRECISION",
+        "ALTER TABLE business_settings ADD COLUMN IF NOT EXISTS attendance_radius_m INTEGER DEFAULT 200",
+        "ALTER TABLE attendances ADD COLUMN IF NOT EXISTS check_in_lat DOUBLE PRECISION",
+        "ALTER TABLE attendances ADD COLUMN IF NOT EXISTS check_in_lng DOUBLE PRECISION",
+        "ALTER TABLE attendances ADD COLUMN IF NOT EXISTS check_out_lat DOUBLE PRECISION",
+        "ALTER TABLE attendances ADD COLUMN IF NOT EXISTS check_out_lng DOUBLE PRECISION",
+
     ]
     try:
         for sql in statements:

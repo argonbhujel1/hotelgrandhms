@@ -3,29 +3,42 @@
 {% block content %}
 <h2 style="margin-bottom:.35rem">My Attendance</h2>
 <p style="color:var(--muted);margin-bottom:1rem">
-  Nepal time (Kathmandu, UTC+5:45) · Today: <strong>{{ npt_today }}</strong>
+  Nepal time (Kathmandu) · Today: <strong>{{ npt_today.strftime('%d/%m/%Y') if npt_today else '' }}</strong>
   · Now: <strong id="nptClock">{{ npt_now.strftime('%H:%M:%S') if npt_now else '' }}</strong>
+  {% if geo_required %} · Must be within <strong>{{ radius_m }} m</strong> of hotel{% endif %}
 </p>
-<div class="panel" style="max-width:420px;margin-bottom:1rem">
+<div class="panel" style="max-width:440px;margin-bottom:1rem">
   <div class="panel-body">
     {% if today_att and today_att.check_in %}
-      <p>Checked in: <strong>{{ today_att.check_in | format_npt('%H:%M') }}</strong> NPT</p>
+      <p>Status:
+        {% if today_att.check_out %}
+          <span class="badge badge-checked_out" style="background:#14532d;color:#bbf7d0">Checked out</span>
+        {% else %}
+          <span class="badge badge-working" style="background:#1e3a5f;color:#bfdbfe">Working</span>
+        {% endif %}
+      </p>
+      <p>Checked in: <strong>{{ today_att.check_in.strftime('%H:%M') if today_att.check_in else '—' }}</strong> NPT</p>
       {% if today_att.check_out %}
-        <p>Checked out: <strong>{{ today_att.check_out | format_npt('%H:%M') }}</strong> NPT</p>
+        <p>Checked out: <strong>{{ today_att.check_out.strftime('%H:%M') }}</strong> NPT</p>
         <p style="color:var(--muted)">Worked: {{ today_att.presence_minutes or 0 }} minutes</p>
       {% else %}
-        <form method="post" style="margin-top:.75rem">
+        <form method="post" id="coForm" style="margin-top:.75rem">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <button name="action" value="check_out" class="btn btn-primary">Check Out</button>
+          <input type="hidden" name="latitude" id="coLat">
+          <input type="hidden" name="longitude" id="coLng">
+          <button name="action" value="check_out" class="btn btn-primary" id="coBtn">Check Out</button>
         </form>
       {% endif %}
     {% else %}
       <p style="margin-bottom:.75rem">You have not checked in today.</p>
-      <form method="post">
+      <form method="post" id="ciForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button name="action" value="check_in" class="btn btn-primary">Check In</button>
+        <input type="hidden" name="latitude" id="ciLat">
+        <input type="hidden" name="longitude" id="ciLng">
+        <button name="action" value="check_in" class="btn btn-primary" id="ciBtn">Check In</button>
       </form>
     {% endif %}
+    <p id="geoMsg" style="color:var(--muted);font-size:.85rem;margin-top:.75rem"></p>
   </div>
 </div>
 <div class="panel">
@@ -36,11 +49,15 @@
       <tbody>
       {% for r in records %}
         <tr>
-          <td>{{ r.date }}</td>
-          <td>{{ r.check_in | format_npt('%H:%M') if r.check_in else '—' }}</td>
-          <td>{{ r.check_out | format_npt('%H:%M') if r.check_out else '—' }}</td>
+          <td>{{ r.date.strftime('%d/%m/%Y') if r.date else r.date }}</td>
+          <td>{{ r.check_in.strftime('%H:%M') if r.check_in else '—' }}</td>
+          <td>{{ r.check_out.strftime('%H:%M') if r.check_out else '—' }}</td>
           <td>{{ r.presence_minutes or 0 }}</td>
-          <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+          <td>
+            {% if r.check_out %}Checked out
+            {% elif r.check_in %}Working
+            {% else %}{{ r.status }}{% endif %}
+          </td>
         </tr>
       {% else %}
         <tr><td colspan="5">No records yet.</td></tr>
@@ -52,14 +69,44 @@
 <script>
 (function(){
   var el = document.getElementById('nptClock');
-  if (!el) return;
-  function tick() {
-    try {
-      el.textContent = new Date().toLocaleTimeString('en-NP', { timeZone: 'Asia/Kathmandu', hour12: false });
-    } catch (e) {}
+  function tick(){ try { el.textContent = new Date().toLocaleTimeString('en-NP',{timeZone:'Asia/Kathmandu',hour12:false}); } catch(e){} }
+  if (el) { tick(); setInterval(tick,1000); }
+
+  var msg = document.getElementById('geoMsg');
+  function fill(latId, lngId, cb) {
+    if (!navigator.geolocation) {
+      if (msg) msg.textContent = 'Geolocation not supported on this device.';
+      cb(false); return;
+    }
+    if (msg) msg.textContent = 'Getting location…';
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      document.getElementById(latId).value = pos.coords.latitude;
+      document.getElementById(lngId).value = pos.coords.longitude;
+      if (msg) msg.textContent = 'Location ready (' + pos.coords.latitude.toFixed(5) + ', ' + pos.coords.longitude.toFixed(5) + ')';
+      cb(true);
+    }, function(err) {
+      if (msg) msg.textContent = 'Location error: ' + (err.message || 'denied') + '. Allow location access.';
+      cb(false);
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
   }
-  tick();
-  setInterval(tick, 1000);
+  function bind(formId, latId, lngId, btnId) {
+    var form = document.getElementById(formId);
+    if (!form) return;
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var btn = document.getElementById(btnId);
+      if (btn) btn.disabled = true;
+      fill(latId, lngId, function(ok) {
+        if (!ok && {{ 'true' if geo_required else 'false' }}) {
+          if (btn) btn.disabled = false;
+          return;
+        }
+        form.submit();
+      });
+    });
+  }
+  bind('ciForm', 'ciLat', 'ciLng', 'ciBtn');
+  bind('coForm', 'coLat', 'coLng', 'coBtn');
 })();
 </script>
 {% endblock %}
