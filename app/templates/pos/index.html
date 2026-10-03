@@ -103,7 +103,9 @@
 
   var cart = {};
   var currentFolioId = null;
-  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content || "";
+  var CSRF = (document.querySelector('meta[name="csrf-token"]') || {}).content
+    || (document.querySelector('input[name="csrf_token"]') || {}).value
+    || "";
   var URL_CHECKOUT = {{ url_for('pos.checkout')|tojson }};
   var URL_FOLIO = {{ url_for('pos.folio_info')|tojson }};
   var URL_CLOSE = {{ url_for('pos.close_folio')|tojson }};
@@ -237,8 +239,8 @@
     var s = $("posSource").value;
     if (s === "COUNTER") return;
     var url = URL_FOLIO + "?source=" + encodeURIComponent(s);
-    if (s === "ROOM") url += "&room_id=" + ($("posRoom").value || "");
-    if (s === "TABLE") url += "&table_id=" + ($("posTable").value || "");
+    if (s === "ROOM" && $("posRoom")) url += "&room_id=" + ($("posRoom").value || "");
+    if (s === "TABLE" && $("posTable")) url += "&table_id=" + ($("posTable").value || "");
     fetch(url)
       .then(function (r) { return r.json(); })
       .then(function (d) {
@@ -260,9 +262,9 @@
       .catch(function () {});
   }
 
-  $("posSource").addEventListener("change", updateSourceUI);
-  $("posRoom").addEventListener("change", loadFolio);
-  $("posTable").addEventListener("change", loadFolio);
+  if ($("posSource")) $("posSource").addEventListener("change", updateSourceUI);
+  if ($("posRoom")) $("posRoom").addEventListener("change", loadFolio);
+  if ($("posTable")) $("posTable").addEventListener("change", loadFolio);
 
   function doCheckout(closeBill) {
     var items = [];
@@ -273,7 +275,7 @@
       alert("Please select food/drinks from the left first.");
       return;
     }
-    var s = $("posSource").value;
+    var s = "COUNTER";
     var emailVal = ($("posEmail") && $("posEmail").value || "").trim();
     if (s === "COUNTER" && !emailVal) {
       alert("Customer email is required for counter (bill will be emailed).");
@@ -283,8 +285,8 @@
 
     var body = {
       source: s,
-      room_id: s === "ROOM" ? $("posRoom").value : null,
-      table_id: s === "TABLE" ? $("posTable").value : null,
+      room_id: null,
+      table_id: null,
       customer_name: $("posCustomer").value || null,
       customer_email: $("posEmail").value || null,
       discount: $("posDiscount").value || 0,
@@ -303,7 +305,7 @@
       .then(function (d) {
         $("btnSale").disabled = false;
         if (!d.ok) {
-          alert(d.error || "Failed. Set PAN in Settings → Business if billing.");
+          alert(d.error || "Sale failed. Check email, menu items, or Settings → Business (PAN).");
           return;
         }
         var msg = "Order " + d.order_number;

@@ -107,8 +107,7 @@ def close_folio_and_bill(folio, payment_method="cash", amount_received=None, use
     ensure_room_nights(folio, user.id if user else None)
 
     settings = BusinessSettings.get_settings()
-    if not settings.pan or not str(settings.pan).strip():
-        raise ValueError("PAN is required in Business Settings before billing.")
+    pan_value = (settings.pan or "").strip() or "N/A"
 
     tax = TaxSettings.get_settings()
     vat_rate = money(tax.vat_rate or 13)
@@ -137,7 +136,7 @@ def close_folio_and_bill(folio, payment_method="cash", amount_received=None, use
         business_name=settings.business_name,
         address=settings.address,
         phone=settings.phone,
-        pan=settings.pan,
+        pan=pan_value,
         vat_number=settings.vat_number or None,
         customer_name=folio.customer_name or (first_order.customer_name if first_order else "—"),
         order_type=folio.source,

@@ -11,6 +11,55 @@ from app.services.folio_service import get_or_open_folio
 
 bookings_bp = Blueprint("bookings", __name__)
 
+def _as_dt(v):
+    if v is None:
+        return None
+    if isinstance(v, datetime):
+        return v
+    return v
+
+
+def rooms_free_for_range(check_in, check_out, exclude_booking_id=None):
+    """Rooms not blocked by an overlapping active booking (website or HMS)."""
+    busy = set()
+    active = Booking.query.filter(
+        Booking.status.in_(["pending", "confirmed", "checked_in", "booked", "reserved"])
+    ).all()
+    ci = _as_dt(check_in)
+    co = _as_dt(check_out)
+    for b in active:
+        if exclude_booking_id and b.id == exclude_booking_id:
+            continue
+        if not b.room_id:
+            continue
+        b_ci, b_co = _as_dt(b.check_in), _as_dt(b.check_out)
+        if not b_ci or not b_co:
+            # no dates — treat room as held if status is active
+            busy.add(b.room_id)
+            continue
+        # normalize date-only comparisons
+        try:
+            a0 = b_ci.date() if hasattr(b_ci, "date") else b_ci
+            a1 = b_co.date() if hasattr(b_co, "date") else b_co
+            c0 = ci.date() if hasattr(ci, "date") else ci
+            c1 = co.date() if hasattr(co, "date") else co
+            if a0 < c1 and a1 > c0:
+                busy.add(b.room_id)
+        except Exception:
+            busy.add(b.room_id)
+    q = Room.query.filter(Room.is_active == True).order_by(Room.number)
+    rooms = []
+    for r in q.all():
+        st = (r.status or "available").lower()
+        if st in ("maintenance", "disabled", "out_of_order"):
+            continue
+        if r.id in busy:
+            continue
+        rooms.append(r)
+    return rooms
+
+
+
 
 @bookings_bp.route("/")
 @login_required
@@ -28,14 +77,23 @@ def list_bookings():
 @login_required
 @permission_required("bookings.create")
 def add_booking():
-    rooms = Room.query.filter(Room.is_active == True, Room.status.in_(["available", "reserved"])).order_by(Room.number).all()
+    # Default list: free for next 30 days window starting now (no website double-book)
+    from datetime import timedelta
+    _now = datetime.now()
+    rooms = rooms_free_for_range(_now, _now + timedelta(days=1))
     if request.method == "POST":
         room_id = int(request.form.get("room_id"))
         check_in = datetime.strptime(request.form.get("check_in"), "%Y-%m-%dT%H:%M")
         check_out = datetime.strptime(request.form.get("check_out"), "%Y-%m-%dT%H:%M")
+        # Recompute free rooms for selected dates
+        rooms = rooms_free_for_range(check_in, check_out)
         advance = Decimal(request.form.get("advance_amount") or "0")
         if advance <= 0:
             flash("Advance payment is mandatory.", "danger")
+            return render_template("bookings/form.html", booking=None, rooms=rooms)
+        # Block if room already booked on website/HMS for these dates
+        if room_id not in [r.id for r in rooms]:
+            flash("This room is already booked for those dates (website or HMS). Choose another room or dates.", "danger")
             return render_template("bookings/form.html", booking=None, rooms=rooms)
         b = Booking(
             guest_name=request.form.get("guest_name"),
@@ -145,3 +203,25 @@ def update_status(bid):
         pass
     flash("Status updated.", "success")
     return redirect(url_for("bookings.list_bookings"))
+
+
+@bookings_bp.route("/available-rooms")
+@login_required
+@permission_required("bookings.create")
+def available_rooms_api():
+    """JSON: rooms free between check_in and check_out (blocks website bookings too)."""
+    from flask import jsonify
+    ci_s = request.args.get("check_in") or ""
+    co_s = request.args.get("check_out") or ""
+    try:
+        check_in = datetime.strptime(ci_s[:16], "%Y-%m-%dT%H:%M") if "T" in ci_s else datetime.strptime(ci_s[:10], "%Y-%m-%d")
+        check_out = datetime.strptime(co_s[:16], "%Y-%m-%dT%H:%M") if "T" in co_s else datetime.strptime(co_s[:10], "%Y-%m-%d")
+    except Exception:
+        return jsonify({"rooms": [], "error": "Invalid dates"}), 400
+    rooms = rooms_free_for_range(check_in, check_out)
+    return jsonify({
+        "rooms": [
+            {"id": r.id, "number": r.number, "room_type": r.room_type, "price": float(r.price or 0)}
+            for r in rooms
+        ]
+    })
