@@ -127,15 +127,44 @@ def change_order_status(order, new_status, user_id=None, note=None):
         title_map = {
             "ACCEPTED": ("🔔 Order Accepted", ["staff", "admin", "super_admin", "kitchen"]),
             "PREPARING": ("🔔 Preparing", ["staff", "kitchen", "admin", "super_admin"]),
-            "READY": ("🔔 Ready", ["staff", "kitchen", "reception", "admin", "super_admin"]),
+            "READY": ("🔔 Order READY — serve now", ["staff", "kitchen", "reception", "admin", "super_admin"]),
             "DELIVERED": ("🔔 Served", ["staff", "admin", "super_admin"]),
             "COMPLETED": ("🔔 Bill/Payment update", ["reception", "admin", "super_admin", "cashier"]),
             "CANCELLED": ("🔔 Order Cancelled", ["kitchen", "staff", "admin", "super_admin"]),
         }
         if new_status in title_map:
             title, roles = title_map[new_status]
-            body = f"{order.order_number} · Rs. {order.total}"
+            loc = ""
+            if getattr(order, "room_id", None):
+                loc = " (Room order)"
+            elif getattr(order, "table_id", None):
+                loc = " (Table order)"
+            body = f"{order.order_number} · Rs. {order.total}{loc}"
             notify_roles(roles, title, body, url=f"/orders/{order.id}", tag=f"order-{order.id}-{new_status}")
+            # Kitchen READY → prioritise Waiter push
+            # Delay alert to admin if order waited > 15 min before READY/ACCEPTED
+            try:
+                created = order.created_at
+                if created and new_status in ("ACCEPTED", "PREPARING", "READY"):
+                    age_min = int((npt_now_naive() - created).total_seconds() // 60)
+                    if age_min >= 15:
+                        notify_roles(
+                            ["admin", "super_admin"],
+                            "⚠️ Order delay",
+                            f"{order.order_number} was {age_min} min old at {new_status}",
+                            url=f"/orders/{order.id}",
+                            tag=f"order-delay-{order.id}",
+                        )
+            except Exception:
+                pass
+            if new_status == "READY":
+                notify_roles(
+                    ["staff"],
+                    "🔔 READY — please serve",
+                    f"{order.order_number} is ready{loc}",
+                    url=f"/orders/{order.id}",
+                    tag=f"order-ready-waiter-{order.id}",
+                )
             if order.customer_email:
                 notify_customer_email(
                     order.customer_email,

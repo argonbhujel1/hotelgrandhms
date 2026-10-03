@@ -119,9 +119,10 @@
 
 {# ── Mobile / PWA bottom navigation (permission-based) ── #}
 <nav class="bottom-nav no-print" id="bottomNav" aria-label="Staff app navigation">
-  {% set is_hk = current_user.role and current_user.role.code == 'housekeeping' %}
-  {% if is_hk %}
-  {# Housekeeping app bar: Home | Rooms | Tasks | Alerts | Profile #}
+  {% set rc = current_user.role.code if current_user.role else '' %}
+
+  {# ── Housekeeping ── #}
+  {% if rc == 'housekeeping' %}
   <a href="{{ url_for('housekeeping.home') }}" class="bn-item {% if request.endpoint == 'housekeeping.home' %}active{% endif %}">
     <span class="bn-ico">🏠</span><span class="bn-lbl">Home</span>
   </a>
@@ -137,76 +138,94 @@
   <a href="{{ url_for('staff.my_attendance') }}" class="bn-item {% if request.endpoint == 'staff.my_attendance' %}active{% endif %}">
     <span class="bn-ico">👤</span><span class="bn-lbl">Profile</span>
   </a>
-  {% else %}
 
+  {# ── Reception ── #}
+  {% elif rc == 'reception' %}
+  <a href="{{ url_for('dashboard.index') }}" class="bn-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+    <span class="bn-ico">🏠</span><span class="bn-lbl">Home</span>
+  </a>
+  <a href="{{ url_for('bookings.list_bookings') }}" class="bn-item {% if request.endpoint and request.endpoint.startswith('bookings.') %}active{% endif %}">
+    <span class="bn-ico">📅</span><span class="bn-lbl">Bookings</span>
+  </a>
+  <a href="{{ url_for('bookings.add_booking') }}" class="bn-fab" title="New Booking / Check-in">
+    <span class="bn-fab-plus">＋</span>
+  </a>
+  <a href="{{ url_for('billing.list_bills') }}" class="bn-item {% if request.endpoint and request.endpoint.startswith('billing.') %}active{% endif %}">
+    <span class="bn-ico">💳</span><span class="bn-lbl">Bills</span>
+  </a>
+  <a href="{{ url_for('staff.my_attendance') }}" class="bn-item">
+    <span class="bn-ico">👤</span><span class="bn-lbl">Profile</span>
+  </a>
+
+  {# ── Waiter ── #}
+  {% elif rc == 'staff' %}
+  <a href="{{ url_for('dashboard.index') }}" class="bn-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+    <span class="bn-ico">🏠</span><span class="bn-lbl">Home</span>
+  </a>
+  <a href="{{ url_for('orders.list_orders') }}" class="bn-item {% if request.endpoint and request.endpoint.startswith('orders.') %}active{% endif %}">
+    <span class="bn-ico">📋</span><span class="bn-lbl">Orders</span>
+  </a>
+  <a href="{{ url_for('orders.manual_add') }}" class="bn-fab" title="Table / Room order">
+    <span class="bn-fab-plus">＋</span>
+  </a>
+  <a href="{{ url_for('billing.list_bills') }}" class="bn-item {% if request.endpoint and request.endpoint.startswith('billing.') %}active{% endif %}">
+    <span class="bn-ico">💳</span><span class="bn-lbl">Bills</span>
+  </a>
+  <a href="{{ url_for('staff.my_attendance') }}" class="bn-item">
+    <span class="bn-ico">👤</span><span class="bn-lbl">Profile</span>
+  </a>
+
+  {# ── Kitchen ── #}
+  {% elif rc == 'kitchen' %}
+  <a href="{{ url_for('dashboard.index') }}" class="bn-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+    <span class="bn-ico">🏠</span><span class="bn-lbl">Home</span>
+  </a>
+  <a href="{{ url_for('kitchen.index') }}" class="bn-item {% if request.endpoint and request.endpoint.startswith('kitchen.') %}active{% endif %}">
+    <span class="bn-ico">🍳</span><span class="bn-lbl">KOT</span>
+  </a>
+  <a href="{{ url_for('orders.list_orders') }}" class="bn-fab" title="Orders">
+    <span class="bn-fab-plus">📋</span>
+  </a>
+  <a href="{{ url_for('orders.list_orders') }}?status=NEW" class="bn-item">
+    <span class="bn-ico">🔔</span><span class="bn-lbl">Alerts</span>
+  </a>
+  <a href="{{ url_for('staff.my_attendance') }}" class="bn-item">
+    <span class="bn-ico">👤</span><span class="bn-lbl">Profile</span>
+  </a>
+
+  {# ── Default (admin / cashier / other) ── #}
+  {% else %}
   {% if current_user.has_permission('dashboard.view') %}
   <a href="{{ url_for('dashboard.index') }}" class="bn-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
     <span class="bn-ico">🏠</span><span class="bn-lbl">Home</span>
   </a>
   {% endif %}
-
-  {% if current_user.has_permission('orders.view') or current_user.has_permission('kitchen.view') %}
+  {% if current_user.has_permission('orders.view') %}
   <a href="{{ url_for('orders.list_orders') }}" class="bn-item {% if request.endpoint and request.endpoint.startswith('orders.') %}active{% endif %}">
     <span class="bn-ico">📋</span><span class="bn-lbl">Orders</span>
   </a>
   {% elif current_user.has_permission('bookings.view') %}
-  <a href="{{ url_for('bookings.list_bookings') }}" class="bn-item {% if request.endpoint and request.endpoint.startswith('bookings.') %}active{% endif %}">
-    <span class="bn-ico">📅</span><span class="bn-lbl">Booking</span>
-  </a>
-  {% elif current_user.has_permission('rooms.view') %}
-  <a href="{{ url_for('rooms.list_rooms') }}" class="bn-item {% if request.endpoint and 'rooms' in (request.endpoint or '') %}active{% endif %}">
-    <span class="bn-ico">🛏</span><span class="bn-lbl">Rooms</span>
-  </a>
-  {% endif %}
-
-  {% if current_user.has_permission('orders.accept') %}
-  <a href="{{ url_for('orders.manual_add') }}" class="bn-fab" title="Manual Order">
-    <span class="bn-fab-plus">＋</span>
-  </a>
-  {% elif current_user.has_permission('kitchen.view') %}
-  <a href="{{ url_for('kitchen.index') }}" class="bn-fab" title="Kitchen / KOT">
-    <span class="bn-fab-plus">🍳</span>
-  </a>
-  {% elif current_user.has_permission('bookings.checkin') or current_user.has_permission('bookings.checkout') %}
-  <a href="{{ url_for('bookings.list_bookings') }}" class="bn-fab" title="Check-in / Out">
-    <span class="bn-fab-plus">🔑</span>
-  </a>
-  {% elif current_user.has_permission('rooms.status') or (current_user.role and current_user.role.code == 'housekeeping') %}
-  <a href="{{ url_for('rooms.list_rooms', status='dirty') }}" class="bn-fab" title="Housekeeping">
-    <span class="bn-fab-plus">🧹</span>
-  </a>
-  {% else %}
-  <a href="{{ url_for('staff.my_attendance') }}" class="bn-fab" title="Attendance">
-    <span class="bn-fab-plus">⏱</span>
-  </a>
-  {% endif %}
-
-  {% if current_user.has_permission('kitchen.view') %}
-  <a href="{{ url_for('kitchen.index') }}" class="bn-item {% if request.endpoint and request.endpoint.startswith('kitchen.') %}active{% endif %}">
-    <span class="bn-ico">🍳</span><span class="bn-lbl">Kitchen</span>
-  </a>
-  {% elif current_user.has_permission('billing.view') %}
-  <a href="{{ url_for('billing.list_bills') }}" class="bn-item {% if request.endpoint and request.endpoint.startswith('billing.') %}active{% endif %}">
-    <span class="bn-ico">💳</span><span class="bn-lbl">Billing</span>
-  </a>
-  {% elif current_user.has_permission('rooms.view') %}
-  <a href="{{ url_for('rooms.list_rooms') }}" class="bn-item">
-    <span class="bn-ico">🧹</span><span class="bn-lbl">HK</span>
-  </a>
-  {% elif current_user.has_permission('bookings.view') %}
   <a href="{{ url_for('bookings.list_bookings') }}" class="bn-item">
-    <span class="bn-ico">👤</span><span class="bn-lbl">Guests</span>
-  </a>
-  {% else %}
-  <a href="{{ url_for('staff.my_attendance') }}" class="bn-item">
-    <span class="bn-ico">⏱</span><span class="bn-lbl">Attend</span>
+    <span class="bn-ico">📅</span><span class="bn-lbl">Bookings</span>
   </a>
   {% endif %}
-
-  <a href="{{ url_for('staff.my_attendance') }}" class="bn-item {% if request.endpoint == 'staff.my_attendance' %}active{% endif %}">
-    <span class="bn-ico">👤</span><span class="bn-lbl">Me</span>
-  </a>
-
+  {% if current_user.has_permission('orders.accept') %}
+  <a href="{{ url_for('orders.manual_add') }}" class="bn-fab" title="Manual Order"><span class="bn-fab-plus">＋</span></a>
+  {% elif current_user.has_permission('kitchen.view') %}
+  <a href="{{ url_for('kitchen.index') }}" class="bn-fab" title="KOT"><span class="bn-fab-plus">🍳</span></a>
+  {% elif current_user.has_permission('bookings.create') %}
+  <a href="{{ url_for('bookings.list_bookings') }}" class="bn-fab" title="Booking"><span class="bn-fab-plus">＋</span></a>
+  {% else %}
+  <a href="{{ url_for('staff.my_attendance') }}" class="bn-fab" title="Attendance"><span class="bn-fab-plus">⏱</span></a>
+  {% endif %}
+  {% if current_user.has_permission('billing.view') %}
+  <a href="{{ url_for('billing.list_bills') }}" class="bn-item"><span class="bn-ico">💳</span><span class="bn-lbl">Bills</span></a>
+  {% elif current_user.has_permission('kitchen.view') %}
+  <a href="{{ url_for('kitchen.index') }}" class="bn-item"><span class="bn-ico">🍳</span><span class="bn-lbl">Kitchen</span></a>
+  {% else %}
+  <a href="{{ url_for('staff.my_attendance') }}" class="bn-item"><span class="bn-ico">⏱</span><span class="bn-lbl">Attend</span></a>
+  {% endif %}
+  <a href="{{ url_for('staff.my_attendance') }}" class="bn-item"><span class="bn-ico">👤</span><span class="bn-lbl">Profile</span></a>
   {% endif %}
 </nav>
 {% else %}

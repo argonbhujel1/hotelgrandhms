@@ -1,43 +1,113 @@
 
 
 def _ensure_roles_and_perms():
-    """Idempotent: add Housekeeping role + missing role permissions on existing DBs."""
+    """Idempotent: roles + permission sets for Reception, Waiter, Kitchen, Housekeeping."""
     from app.models.user import Role, Permission, RolePermission
-    # Create role if missing
-    hk = Role.query.filter_by(code="housekeeping").first()
-    if not hk:
-        hk = Role(code="housekeeping", name="Housekeeping")
-        db.session.add(hk)
-        db.session.flush()
-    # Ensure permission rows exist
-    needed_codes = [
-        "dashboard.view", "rooms.view", "rooms.status", "attendance.view", "leave.view",
-        "orders.view", "orders.accept", "menu.view", "kitchen.view",
+
+    role_defs = [
+        ("super_admin", "Super Admin"),
+        ("admin", "Admin / Manager"),
+        ("kitchen", "Kitchen Staff"),
+        ("reception", "Reception Staff"),
+        ("cashier", "Cashier"),
+        ("staff", "Waiter"),
+        ("housekeeping", "Housekeeping"),
+    ]
+    roles = {}
+    for code, name in role_defs:
+        r = Role.query.filter_by(code=code).first()
+        if not r:
+            r = Role(code=code, name=name)
+            db.session.add(r)
+            db.session.flush()
+        elif r.name != name:
+            r.name = name
+        roles[code] = r
+
+    # Permission catalog (create if missing)
+    all_codes = [
+        "dashboard.view",
+        "rooms.view", "rooms.add", "rooms.edit", "rooms.status", "rooms.qr",
+        "bookings.view", "bookings.create", "bookings.edit", "bookings.cancel",
+        "bookings.checkin", "bookings.checkout", "bookings.payment",
+        "menu.view", "menu.add", "menu.edit",
+        "orders.view", "orders.details", "orders.accept", "orders.status", "orders.cancel",
+        "kitchen.view", "kitchen.accept", "kitchen.preparing", "kitchen.ready",
+        "kitchen.delivered", "kitchen.completed",
+        "billing.view", "billing.create", "billing.complete", "billing.print", "billing.reprint",
+        "staff.view", "staff.add", "staff.edit", "staff.role",
+        "attendance.view", "leave.view", "salary.view",
+        "sessions.view",
     ]
     perms = {p.code: p for p in Permission.query.all()}
-    for code in needed_codes:
+    for code in all_codes:
         if code not in perms:
             p = Permission(code=code, name=code.replace(".", " ").title(), module=code.split(".")[0])
             db.session.add(p)
             db.session.flush()
             perms[code] = p
-    # Assign housekeeping defaults
-    hk_codes = ["dashboard.view", "rooms.view", "rooms.status", "attendance.view", "leave.view"]
-    for code in hk_codes:
-        p = perms.get(code)
-        if not p:
-            continue
-        exists = RolePermission.query.filter_by(role_id=hk.id, permission_id=p.id).first()
-        if not exists:
-            db.session.add(RolePermission(role_id=hk.id, permission_id=p.id))
-    # Waiter label
-    waiter = Role.query.filter_by(code="staff").first()
-    if waiter and waiter.name != "Waiter":
-        waiter.name = "Waiter"
+
+    def _grant(role_code, codes):
+        r = roles.get(role_code)
+        if not r:
+            return
+        for code in codes:
+            p = perms.get(code)
+            if not p:
+                continue
+            exists = RolePermission.query.filter_by(role_id=r.id, permission_id=p.id).first()
+            if not exists:
+                db.session.add(RolePermission(role_id=r.id, permission_id=p.id))
+
+    # Reception: rooms, bookings, check-in/out, billing view/print, payments
+    _grant("reception", [
+        "dashboard.view",
+        "rooms.view", "rooms.status",
+        "bookings.view", "bookings.create", "bookings.edit", "bookings.checkin", "bookings.checkout", "bookings.payment",
+        "orders.view",
+        "billing.view", "billing.print", "billing.complete",
+        "attendance.view", "leave.view",
+    ])
+
+    # Waiter: orders, table/room service, KOT view, serve, bills view — no final settlement edit
+    _grant("staff", [
+        "dashboard.view",
+        "orders.view", "orders.details", "orders.accept", "orders.status",
+        "menu.view", "rooms.view",
+        "kitchen.view",
+        "billing.view",
+        "attendance.view", "leave.view", "salary.view",
+    ])
+
+    # Kitchen: KOT flow NEW→ACCEPT→PREPARING→READY
+    _grant("kitchen", [
+        "dashboard.view",
+        "kitchen.view", "kitchen.accept", "kitchen.preparing", "kitchen.ready",
+        "kitchen.delivered", "kitchen.completed",
+        "orders.view", "orders.details", "orders.status",
+        "attendance.view", "leave.view",
+    ])
+
+    # Housekeeping
+    _grant("housekeeping", [
+        "dashboard.view",
+        "rooms.view", "rooms.status",
+        "attendance.view", "leave.view",
+    ])
+
+    # Cashier keeps billing-focused
+    _grant("cashier", [
+        "dashboard.view",
+        "billing.view", "billing.create", "billing.complete", "billing.print", "billing.reprint",
+        "orders.view", "orders.status",
+        "attendance.view",
+    ])
+
     try:
         db.session.commit()
     except Exception:
         db.session.rollback()
+
 
 def _ensure_menu_categories_hms():
     """Ensure fixed restaurant/bar categories exist (idempotent)."""
