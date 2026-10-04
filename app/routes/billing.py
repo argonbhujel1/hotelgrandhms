@@ -98,6 +98,28 @@ def print_bill(bill_id):
         flash("Bill not found.", "danger")
         return redirect(url_for("billing.list_bills"))
     log_activity("bill_print", module="billing", record_id=bill.id)
+    # Email bill on print / create flow
+    try:
+        from app.services.email_service import send_email, get_admin_emails
+        html = (
+            f"<p>Bill <strong>{bill.bill_number}</strong></p>"
+            f"<p>Customer: {bill.customer_name or '—'}<br>Total: <strong>Rs. {bill.total}</strong><br>"
+            f"Payment: {bill.payment_method or '—'}</p>"
+            f"<p>Printed from HMS.</p>"
+        )
+        for email in get_admin_emails() or []:
+            send_email(email, f"Bill {bill.bill_number} (print)", html, f"Bill {bill.bill_number}")
+        # customer email if stored on related order
+        cust = None
+        if bill.order_id:
+            from app.models.order import Order
+            o = db.session.get(Order, bill.order_id)
+            if o:
+                cust = getattr(o, "customer_email", None)
+        if cust:
+            send_email(cust, f"Your bill {bill.bill_number} · Hotel Grand", html, f"Bill {bill.bill_number}")
+    except Exception:
+        pass
     return render_template("billing/print.html", bill=bill, reprint=False)
 
 

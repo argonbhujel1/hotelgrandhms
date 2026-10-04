@@ -167,13 +167,13 @@ def close_folio_and_bill(folio, payment_method="cash", amount_received=None, use
     for o in folio.orders:
         if o.status not in ("CANCELLED",):
             o.status = "COMPLETED"
-            o.completed_at = datetime.utcnow()
+            o.completed_at = npt_now_naive()
             if not o.bill:
                 # only attach if no separate bill
                 pass
 
     folio.status = "closed"
-    folio.closed_at = datetime.utcnow()
+    folio.closed_at = npt_now_naive()
     folio.closed_by_id = user.id if user else None
 
     # Free room/table
@@ -183,4 +183,22 @@ def close_folio_and_bill(folio, payment_method="cash", amount_received=None, use
         folio.table.status = "available"
 
     db.session.commit()
+    
+    # Email bill to customer / admin
+    try:
+        from app.services.email_service import send_email, get_admin_emails
+        html = (
+            f"<p>Bill <strong>{bill.bill_number}</strong> has been generated.</p>"
+            f"<p>Customer: {bill.customer_name or '—'}<br>"
+            f"Total: <strong>Rs. {bill.total}</strong><br>"
+            f"Payment: {bill.payment_method}</p>"
+        )
+        for email in get_admin_emails() or []:
+            send_email(email, f"Bill {bill.bill_number}", html, f"Bill {bill.bill_number}")
+        cust = getattr(bill, "customer_email", None) or (first_order.customer_email if first_order and getattr(first_order, "customer_email", None) else None)
+        if cust:
+            send_email(cust, f"Your bill {bill.bill_number} · Hotel Grand", html, f"Bill {bill.bill_number}")
+    except Exception:
+        pass
+
     return bill

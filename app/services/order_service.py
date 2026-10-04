@@ -1,3 +1,4 @@
+from app.models.room import RestaurantTable
 from decimal import Decimal
 from datetime import datetime
 from app.utils.timeutil import npt_now_naive
@@ -88,6 +89,17 @@ def create_order(
 
     hist = OrderStatusHistory(order_id=order.id, status="NEW", changed_by_id=created_by_id)
     db.session.add(hist)
+
+    # Table order → mark table occupied while order is open
+    if order.table_id:
+        try:
+            from app.models.room import RestaurantTable
+            tbl = db.session.get(RestaurantTable, order.table_id)
+            if tbl and tbl.status == "available":
+                tbl.status = "occupied"
+        except Exception:
+            pass
+
     db.session.commit()
     return order
 
@@ -165,6 +177,42 @@ def change_order_status(order, new_status, user_id=None, note=None):
                     url=f"/orders/{order.id}",
                     tag=f"order-ready-waiter-{order.id}",
                 )
+
+            if new_status == "ACCEPTED":
+                try:
+                    from app.services.email_service import send_email, get_admin_emails
+                    kitchen_name = "Kitchen"
+                    if user_id:
+                        from app.models.user import User
+                        ku = db.session.get(User, user_id)
+                        if ku:
+                            kitchen_name = ku.full_name
+                    loc = ""
+                    if order.table_id:
+                        from app.models.room import RestaurantTable
+                        tb = db.session.get(RestaurantTable, order.table_id)
+                        loc = f"Table {tb.number}" if tb else "Table"
+                    elif order.room_id:
+                        loc = "Room service"
+                    else:
+                        loc = order.source or "Order"
+                    body = (
+                        f"<p>Order <strong>{order.order_number}</strong> was <strong>accepted</strong> by kitchen staff "
+                        f"<strong>{kitchen_name}</strong>.</p>"
+                        f"<p>Source: {loc} · Total: Rs. {order.total}</p>"
+                    )
+                    for email in get_admin_emails() or []:
+                        send_email(email, f"Order accepted · {order.order_number}", body, f"Accepted by {kitchen_name}")
+                    if getattr(order, "customer_email", None):
+                        send_email(
+                            order.customer_email,
+                            f"Your order {order.order_number} was accepted",
+                            f"<p>Kitchen staff <strong>{kitchen_name}</strong> accepted your order.</p>"
+                            f"<p>Total: Rs. {order.total}</p>",
+                            "Order accepted",
+                        )
+                except Exception:
+                    pass
             if order.customer_email:
                 notify_customer_email(
                     order.customer_email,
@@ -183,4 +231,23 @@ def change_order_status(order, new_status, user_id=None, note=None):
             )
     except Exception:
         pass
+    
+    # Free table when order finished/cancelled
+    try:
+        if new_status in ("COMPLETED", "CANCELLED", "DELIVERED") and order.table_id:
+            from app.models.room import RestaurantTable
+            # only free if no other active orders on table
+            active = Order.query.filter(
+                Order.table_id == order.table_id,
+                Order.id != order.id,
+                Order.status.in_(["NEW", "ACCEPTED", "PREPARING", "READY", "DELIVERED"]),
+            ).count()
+            if active == 0:
+                tbl = db.session.get(RestaurantTable, order.table_id)
+                if tbl:
+                    tbl.status = "available"
+                    db.session.commit()
+    except Exception:
+        db.session.rollback()
+
     return order

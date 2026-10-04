@@ -55,8 +55,44 @@ def create_bill_from_order(order, payment_method="cash", amount_received=None, u
 
     if order.status not in ("COMPLETED", "CANCELLED"):
         order.status = "COMPLETED"
-        from datetime import datetime
-        order.completed_at = datetime.utcnow()
+        from app.utils.timeutil import npt_now_naive
+        order.completed_at = npt_now_naive()
+
+    # Free table if this was a table order
+    if order.table_id:
+        try:
+            from app.models.room import RestaurantTable
+            from app.models.order import Order
+            active = Order.query.filter(
+                Order.table_id == order.table_id,
+                Order.id != order.id,
+                Order.status.in_(["NEW", "ACCEPTED", "PREPARING", "READY", "DELIVERED"]),
+            ).count()
+            if active == 0:
+                tbl = db.session.get(RestaurantTable, order.table_id)
+                if tbl:
+                    tbl.status = "available"
+        except Exception:
+            pass
 
     db.session.commit()
+
+    try:
+        from app.services.email_service import send_email, get_admin_emails
+        html = (
+            f"<p>Bill <strong>{bill.bill_number}</strong> created.</p>"
+            f"<p>Customer: {bill.customer_name or '—'}<br>"
+            f"Total: <strong>Rs. {bill.total}</strong><br>Payment: {payment_method}</p>"
+        )
+        for email in get_admin_emails() or []:
+            send_email(email, f"Bill {bill.bill_number}", html, f"Bill {bill.bill_number}")
+        if order.customer_email:
+            send_email(
+                order.customer_email,
+                f"Your bill {bill.bill_number} · Hotel Grand",
+                html,
+                f"Bill {bill.bill_number}",
+            )
+    except Exception:
+        pass
     return bill
