@@ -9,26 +9,27 @@
 </p>
 <div class="panel" style="max-width:440px;margin-bottom:1rem">
   <div class="panel-body">
-    {% if today_att and today_att.check_in %}
-      <p>Status:
-        {% if today_att.check_out %}
-          <span class="badge badge-checked_out" style="background:#14532d;color:#bbf7d0">Checked out</span>
-        {% else %}
-          <span class="badge badge-working" style="background:#1e3a5f;color:#bfdbfe">Working</span>
-        {% endif %}
-      </p>
+    {% if today_att and today_att.check_in and not today_att.check_out %}
+      <p>Status: <span class="badge badge-working" style="background:#1e3a5f;color:#bfdbfe">Working</span></p>
       <p>Checked in: <strong>{{ today_att.check_in.strftime('%H:%M') if today_att.check_in else '—' }}</strong> NPT</p>
-      {% if today_att.check_out %}
-        <p>Checked out: <strong>{{ today_att.check_out.strftime('%H:%M') }}</strong> NPT</p>
-        <p style="color:var(--muted)">Worked: {{ today_att.presence_minutes or 0 }} minutes</p>
-      {% else %}
-        <form method="post" id="coForm" style="margin-top:.75rem">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input type="hidden" name="latitude" id="coLat">
-          <input type="hidden" name="longitude" id="coLng">
-          <button name="action" value="check_out" class="btn btn-primary" id="coBtn">Check Out</button>
-        </form>
-      {% endif %}
+      <form method="post" id="coForm" style="margin-top:.75rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="latitude" id="coLat">
+        <input type="hidden" name="longitude" id="coLng">
+        <button name="action" value="check_out" class="btn btn-primary" id="coBtn">Check Out</button>
+      </form>
+    {% elif today_att and today_att.check_out %}
+      <p>Status: <span class="badge badge-checked_out" style="background:#14532d;color:#bbf7d0">Checked out</span></p>
+      <p>Checked in: <strong>{{ today_att.check_in.strftime('%H:%M') if today_att.check_in else '—' }}</strong> NPT</p>
+      <p>Checked out: <strong>{{ today_att.check_out.strftime('%H:%M') }}</strong> NPT</p>
+      <p style="color:var(--muted)">Last session: {{ today_att.presence_minutes or 0 }} minutes</p>
+      <form method="post" id="ciForm" style="margin-top:.75rem">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="latitude" id="ciLat">
+        <input type="hidden" name="longitude" id="ciLng">
+        <button name="action" value="check_in" class="btn btn-primary" id="ciBtn">Check In again</button>
+      </form>
+      <p style="color:var(--muted);font-size:.85rem;margin-top:.5rem">Need to work more today? Check in again.</p>
     {% else %}
       <p style="margin-bottom:.75rem">You have not checked in today.</p>
       <form method="post" id="ciForm">

@@ -263,17 +263,28 @@ def my_attendance():
                 db.session.commit()
                 notify_outside("check-in", lat, lng, dist)
                 flash(f"Check-in blocked: you are {dist:.0f} m away (max {radius} m). Admin notified.", "danger")
-            elif att and att.check_in:
-                flash("Already checked in today.", "warning")
+            elif att and att.check_in and not att.check_out:
+                flash("Already checked in today. Use Check Out first.", "warning")
             else:
+                # Fresh day OR re-check-in after previous check-out
                 if not att:
                     att = Attendance(user_id=current_user.id, date=today)
                     db.session.add(att)
+                prev_note = ""
+                if att.check_out:
+                    prev_note = (
+                        f"Previous session {att.check_in.strftime('%H:%M') if att.check_in else '?'}–"
+                        f"{att.check_out.strftime('%H:%M')} ({att.presence_minutes or 0} min). "
+                    )
+                    att.notes = ((att.notes or "") + " | " + prev_note).strip(" |")
                 att.check_in = npt_now_naive()
+                att.check_out = None
                 att.status = "checked_in"
                 att.check_in_lat = lat
                 att.check_in_lng = lng
-                log_attempt("check_in", True, lat, lng, dist, "OK")
+                att.check_out_lat = None
+                att.check_out_lng = None
+                log_attempt("check_in", True, lat, lng, dist, "OK" + (" (re-entry)" if prev_note else ""))
                 db.session.commit()
                 flash(f"Checked in at {att.check_in.strftime('%H:%M')} NPT · Working", "success")
         elif action == "check_out" and att and att.check_in and not att.check_out:
