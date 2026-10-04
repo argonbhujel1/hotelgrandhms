@@ -113,11 +113,7 @@ class StaffConsumption(db.Model):
     note = db.Column(db.Text)
     consumption_date = db.Column(db.Date, default=date.today)
     deduction_month = db.Column(db.Date)
-    status = db.Column(db.String(20), default="pending")  # pending, checked_in, working, checked_out, approved, rejected
-    check_in_lat = db.Column(db.Float)
-    check_in_lng = db.Column(db.Float)
-    check_out_lat = db.Column(db.Float)
-    check_out_lng = db.Column(db.Float)
+    status = db.Column(db.String(20), default="pending")  # pending, approved, rejected
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     reviewed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=npt_now_naive)
@@ -177,8 +173,12 @@ class Attendance(db.Model):
     overtime_minutes = db.Column(db.Integer, default=0)
     late_minutes = db.Column(db.Integer, default=0)
     early_minutes = db.Column(db.Integer, default=0)
-    status = db.Column(db.String(20), default="pending")  # pending, approved, rejected
+    status = db.Column(db.String(20), default="pending")  # pending, checked_in, working, checked_out, approved, rejected
     notes = db.Column(db.Text)
+    check_in_lat = db.Column(db.Float)
+    check_in_lng = db.Column(db.Float)
+    check_out_lat = db.Column(db.Float)
+    check_out_lng = db.Column(db.Float)
     reviewed_by_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     created_at = db.Column(db.DateTime, default=npt_now_naive)
 

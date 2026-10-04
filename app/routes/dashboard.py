@@ -48,7 +48,14 @@ def index():
         stats["pending_leave"] = LeaveRequest.query.filter_by(status="pending").count()
         stats["pending_attendance"] = Attendance.query.filter_by(status="pending").count()
         stats["pending_ot"] = OvertimeRequest.query.filter_by(status="pending").count()
-        stats["pending_consumption"] = StaffConsumption.query.filter_by(status="pending").count()
+        try:
+            stats["pending_consumption"] = StaffConsumption.query.filter_by(status="pending").count()
+        except Exception:
+            stats["pending_consumption"] = 0
+            try:
+                db.session.rollback()
+            except Exception:
+                pass
 
     if current_user.has_permission("sessions.view"):
         stats["online_staff"] = StaffSession.query.filter_by(is_active=True, status="online").count()
