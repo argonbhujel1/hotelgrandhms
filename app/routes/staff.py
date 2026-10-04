@@ -757,6 +757,98 @@ def attendance_report():
     )
 
 
+
+@staff_bp.route("/attendance/clear", methods=["POST"])
+@login_required
+@permission_required("staff.view")
+def attendance_clear():
+    """Admin: clear attendance records (filtered or all) + optional logs."""
+    if current_user.role_code not in ("admin", "super_admin"):
+        flash("Only admin can clear attendance.", "danger")
+        return redirect(url_for("staff.attendance_report"))
+
+    scope = (request.form.get("scope") or "filtered").strip()
+    confirm = (request.form.get("confirm") or "").strip()
+    if confirm != "CLEAR":
+        flash('Type CLEAR to confirm.', "danger")
+        return redirect(url_for("staff.attendance_report"))
+
+    from app.models.staff_hr import Attendance, AttendanceLog
+    from calendar import monthrange
+
+    deleted_att = 0
+    deleted_logs = 0
+
+    if scope == "all":
+        deleted_att = Attendance.query.delete()
+        deleted_logs = AttendanceLog.query.delete()
+        db.session.commit()
+        log_activity("attendance_clear_all", module="staff", details=f"att={deleted_att} logs={deleted_logs}")
+        flash(f"Cleared ALL attendance ({deleted_att}) and location logs ({deleted_logs}).", "success")
+        return redirect(url_for("staff.attendance_report"))
+
+    # Filtered clear (same filters as report)
+    staff_id = request.form.get("staff_id", type=int)
+    year = request.form.get("year", type=int)
+    month = request.form.get("month", type=int)
+    day_s = (request.form.get("day") or "").strip()
+
+    specific_day = None
+    if day_s:
+        for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d"):
+            try:
+                specific_day = datetime.strptime(day_s, fmt).date()
+                break
+            except ValueError:
+                continue
+
+    if specific_day:
+        start = end = specific_day
+    else:
+        from app.utils.timeutil import now_npt
+        npt = now_npt()
+        year = year or npt.year
+        month = month or npt.month
+        last = monthrange(year, month)[1]
+        start = date(year, month, 1)
+        end = date(year, month, last)
+
+    q = Attendance.query.filter(Attendance.date >= start, Attendance.date <= end)
+    if staff_id:
+        q = q.filter_by(user_id=staff_id)
+    rows = q.all()
+    deleted_att = len(rows)
+    for r in rows:
+        db.session.delete(r)
+
+    # Logs in same period (by created_at date in NPT naive)
+    lq = AttendanceLog.query.filter(
+        AttendanceLog.created_at >= datetime.combine(start, datetime.min.time()),
+        AttendanceLog.created_at <= datetime.combine(end, datetime.max.time()),
+    )
+    if staff_id:
+        lq = lq.filter_by(user_id=staff_id)
+    logs = lq.all()
+    deleted_logs = len(logs)
+    for r in logs:
+        db.session.delete(r)
+
+    db.session.commit()
+    log_activity(
+        "attendance_clear",
+        module="staff",
+        details=f"{start}→{end} staff={staff_id or 'all'} att={deleted_att} logs={deleted_logs}",
+    )
+    flash(f"Cleared {deleted_att} attendance record(s) and {deleted_logs} log(s) for selected period.", "success")
+    return redirect(url_for(
+        "staff.attendance_report",
+        staff_id=staff_id or "",
+        year=year or "",
+        month=month or "",
+        day=day_s or "",
+    ))
+
+
 @staff_bp.route("/attendance/report/mail", methods=["POST"])
 @login_required
 @permission_required("staff.view")

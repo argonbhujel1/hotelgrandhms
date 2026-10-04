@@ -35,6 +35,35 @@
   </div>
 </div>
 
+{% if current_user.role_code in ('admin', 'super_admin') %}
+<div class="no-print panel" style="margin-bottom:1rem;border-color:#fecaca">
+  <div class="panel-header" style="color:#b91c1c">Clear attendance (Admin)</div>
+  <div class="panel-body">
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:.75rem">
+      Clears attendance records and location logs. Type <strong>CLEAR</strong> to confirm. Cannot be undone.
+    </p>
+    <form method="post" action="{{ url_for('staff.attendance_clear') }}" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-bottom:.75rem"
+          onsubmit="return confirm('Clear attendance for the current filter (month/day/staff)?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="scope" value="filtered">
+      <input type="hidden" name="staff_id" value="{{ staff_id or '' }}">
+      <input type="hidden" name="year" value="{{ year }}">
+      <input type="hidden" name="month" value="{{ month }}">
+      <input type="hidden" name="day" value="{{ day_s }}">
+      <input name="confirm" placeholder="Type CLEAR" required style="padding:.4rem .6rem;border:1px solid var(--border);border-radius:8px;max-width:140px">
+      <button type="submit" class="btn btn-outline" style="border-color:#dc2626;color:#dc2626">Clear filtered period</button>
+    </form>
+    <form method="post" action="{{ url_for('staff.attendance_clear') }}" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center"
+          onsubmit="return confirm('Delete ALL attendance for every staff? This cannot be undone.');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="scope" value="all">
+      <input name="confirm" placeholder="Type CLEAR" required style="padding:.4rem .6rem;border:1px solid var(--border);border-radius:8px;max-width:140px">
+      <button type="submit" class="btn" style="background:#dc2626;color:#fff;border:none">Clear ALL staff attendance</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
 <form method="get" class="no-print panel" style="margin-bottom:1rem">
   <div class="panel-body att-filters">
     <div class="form-group" style="min-width:200px">
